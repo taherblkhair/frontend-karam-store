@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFormErrors } from '../hooks/useFormErrors';
-import { FieldError } from '../components/ui';
+import { FieldError, FormAlert } from '../components/ui';
 import { notifySuccess, notifyError } from '../utils/notify';
 
 export default function LoginPage() {
@@ -10,7 +10,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', phone: '', password: '' });
   const [usePhone, setUsePhone] = useState(false);
-  const { fieldErrors, clearErrors, applyApiError, getFieldError } = useFormErrors();
+  const { formError, clearErrors, applyApiError, getFieldError } = useFormErrors();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +40,8 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError ? <FormAlert message={formError} /> : null}
+
           <div className="flex gap-2 mb-4">
             <button type="button" onClick={() => setUsePhone(false)} className={`flex-1 py-2 rounded-lg ${!usePhone ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
               بالبريد

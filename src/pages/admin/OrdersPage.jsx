@@ -1,30 +1,77 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Eye, Trash2, Printer, Truck, MessageCircle, Save } from 'lucide-react';
+import { Eye, Trash2, Printer, Truck, MessageCircle, Save } from 'lucide-react';
 import { notifySuccess, notifyError } from '../../utils/notify';
+import { useListParams } from '../../hooks/useListParams';
 import api from '../../api/axios';
 import { LoadingSpinner, OrderStatusBadge, Modal } from '../../components/ui';
+import { SearchInput, Pagination } from '../../components/ListControls';
 import { formatPrice, ORDER_STATUS, getWhatsAppLink } from '../../utils/constants';
 import { printOrderInvoice } from '../../utils/invoice';
 import { useAuth } from '../../contexts/AuthContext';
 
 const STATUS_OPTIONS = {
   admin: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
-  sales: ['confirmed', 'processing', 'shipped'],
+  // Sales: pipeline + cancel/return for undelivered / refused orders
+  sales: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
 };
+
+/** Primary sales actions shown as clear buttons (not just status chips) */
+const SALES_ACTIONS = [
+  {
+    status: 'confirmed',
+    label: 'تأكيد الطلب',
+    when: (s) => ['new', 'pending_confirmation'].includes(s),
+    className: 'btn-primary text-sm',
+  },
+  {
+    status: 'processing',
+    label: 'قيد التجهيز',
+    when: (s) => ['confirmed'].includes(s),
+    className: 'btn-secondary text-sm',
+  },
+  {
+    status: 'shipped',
+    label: 'تم الشحن',
+    when: (s) => ['confirmed', 'processing'].includes(s),
+    className: 'btn-secondary text-sm',
+  },
+  {
+    status: 'delivered',
+    label: 'تم التسليم',
+    when: (s) => ['shipped'].includes(s),
+    className: 'btn-primary text-sm',
+  },
+  {
+    status: 'cancelled',
+    label: 'إلغاء الطلب (قبل الاستلام)',
+    when: (s) => !['cancelled', 'returned', 'delivered'].includes(s),
+    className: 'btn-outline text-sm text-red-600 border-red-300',
+    confirm: 'إلغاء الطلب سيعيد الكمية للمخزون. هل أنت متأكد؟',
+  },
+  {
+    status: 'returned',
+    label: 'مرتجع / لم يستلم',
+    when: (s) => ['shipped', 'delivered', 'confirmed', 'processing'].includes(s),
+    className: 'btn-outline text-sm text-orange-600 border-orange-300',
+    confirm: 'تسجيل مرتجع سيعيد الكمية للمخزون. هل أنت متأكد؟',
+  },
+];
 
 export default function OrdersPage() {
   const { isAdmin, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
-  const [search, setSearch] = useState('');
+  const { search, setSearch, page, setPage, withExtra } = useListParams();
   const [selectedId, setSelectedId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [shippingLabel, setShippingLabel] = useState('');
 
+  const listParams = withExtra({ status: statusFilter || undefined });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['orders', statusFilter, search],
-    queryFn: () => api.get('/orders', { params: { status: statusFilter || undefined, search: search || undefined } }),
+    queryKey: ['orders', listParams],
+    queryFn: () => api.get('/orders', { params: listParams }),
   });
 
   const { data: orderDetail, isLoading: detailLoading } = useQuery({
@@ -107,10 +154,7 @@ export default function OrdersPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">الطلبات</h1>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input className="input pr-9" placeholder="بحث برقم الطلب أو الهاتف..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+          <SearchInput value={search} onChange={setSearch} placeholder="بحث برقم الطلب أو الهاتف..." />
           <select className="input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">جميع الحالات</option>
             {allowedStatuses.map((s) => (
@@ -154,6 +198,8 @@ export default function OrdersPage() {
           </table>
         </div>
       )}
+
+      <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
 
       <Modal open={!!selectedId} onClose={() => setSelectedId(null)} title={order ? `طلب ${order.order_number}` : 'تفاصيل الطلب'} size="xl">
         {detailLoading ? <LoadingSpinner /> : order && (
@@ -258,20 +304,47 @@ export default function OrdersPage() {
               </div>
             )}
 
-            <div>
-              <h3 className="font-bold mb-3">تغيير الحالة</h3>
-              <div className="flex flex-wrap gap-2">
-                {allowedStatuses.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => statusMutation.mutate({ id: order.id, status: s })}
-                    disabled={order.status === s}
-                    className={`btn-outline text-xs ${order.status === s ? 'border-primary-600 bg-primary-50' : ''}`}
-                  >
-                    {ORDER_STATUS[s]?.label || s}
-                  </button>
-                ))}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-bold mb-2">إجراءات المبيعات</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  الإلغاء / المرتجع يعيد الكمية تلقائياً إلى المخزون القابل للبيع
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {SALES_ACTIONS.filter((a) => a.when(order.status) && allowedStatuses.includes(a.status)).map((action) => (
+                    <button
+                      key={action.status}
+                      type="button"
+                      disabled={statusMutation.isPending}
+                      className={action.className}
+                      onClick={() => {
+                        if (action.confirm && !window.confirm(action.confirm)) return;
+                        statusMutation.mutate({ id: order.id, status: action.status });
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {isAdmin && (
+                <div>
+                  <h3 className="font-bold mb-3 text-sm text-gray-500">كل الحالات (إدارة)</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {allowedStatuses.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => statusMutation.mutate({ id: order.id, status: s })}
+                        disabled={order.status === s}
+                        className={`btn-outline text-xs ${order.status === s ? 'border-primary-600 bg-primary-50' : ''}`}
+                      >
+                        {ORDER_STATUS[s]?.label || s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {canManage && ['new', 'cancelled'].includes(order.status) && (

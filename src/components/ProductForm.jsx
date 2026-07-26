@@ -135,14 +135,20 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <select className="input" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
-          <option value="">الفئة</option>
-          {categories?.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
-        </select>
-        <select className="input" value={form.brand_id} onChange={(e) => setForm({ ...form, brand_id: e.target.value })}>
-          <option value="">العلامة التجارية</option>
-          {brands?.map((b) => <option key={b.id} value={b.id}>{b.name_ar}</option>)}
-        </select>
+        <div>
+          <select className="input" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+            <option value="">الفئة</option>
+            {categories?.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+          </select>
+          <FieldError message={getFieldError('category_id')} />
+        </div>
+        <div>
+          <select className="input" value={form.brand_id} onChange={(e) => setForm({ ...form, brand_id: e.target.value })}>
+            <option value="">العلامة التجارية (اختياري)</option>
+            {brands?.map((b) => <option key={b.id} value={b.id}>{b.name_ar}</option>)}
+          </select>
+          <FieldError message={getFieldError('brand_id')} />
+        </div>
       </div>
 
       <textarea className="input" placeholder="الوصف" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />

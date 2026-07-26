@@ -2,8 +2,7 @@ import { useState, useCallback } from 'react';
 import { mapFieldErrors, parseApiError } from '../utils/apiMessage.js';
 
 /**
- * Apply API validation errors to form fields.
- * Field messages are displayed as-is from the backend `errors` array.
+ * Apply API validation errors to form fields + a general form alert.
  */
 export function useFormErrors() {
   const [fieldErrors, setFieldErrors] = useState({});
@@ -15,15 +14,15 @@ export function useFormErrors() {
   }, []);
 
   const applyApiError = useCallback((error) => {
-    const { message, errors } = parseApiError(error);
+    const { message, errors, statusCode, code } = parseApiError(error);
     const mapped = mapFieldErrors(errors);
+    const hasFields = Object.keys(mapped).length > 0;
 
     setFieldErrors(mapped);
+    // Always keep a general message so FormAlert can show it
+    setFormError(message || '');
 
-    // General alert when there are no field-specific errors
-    setFormError(errors.length ? '' : message);
-
-    return { message, errors, fieldErrors: mapped };
+    return { message, errors, fieldErrors: mapped, hasFields, statusCode, code };
   }, []);
 
   const getFieldError = useCallback((field) => fieldErrors[field] || '', [fieldErrors]);
