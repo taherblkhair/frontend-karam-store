@@ -86,8 +86,8 @@ export default function SettingsPage() {
             <input className="input" placeholder="العملة" value={form.currency || ''} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <input className="input" type="number" placeholder="أقل سعر شحن (د.ل)" value={form.min_shipping || ''} onChange={(e) => setForm({ ...form, min_shipping: e.target.value })} />
-            <input className="input" type="number" placeholder="أعلى سعر شحن (د.ل)" value={form.max_shipping || ''} onChange={(e) => setForm({ ...form, max_shipping: e.target.value })} />
+            <input className="input" type="number" min="0" step="0.01" placeholder="أقل سعر شحن (د.ل)" value={form.min_shipping || ''} onChange={(e) => setForm({ ...form, min_shipping: e.target.value })} />
+            <input className="input" type="number" min="0" step="0.01" placeholder="أعلى سعر شحن (د.ل)" value={form.max_shipping || ''} onChange={(e) => setForm({ ...form, max_shipping: e.target.value })} />
           </div>
         </div>
 
@@ -101,12 +101,16 @@ export default function SettingsPage() {
             <option value="">اختر المدينة</option>
             {citiesData?.data?.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
           </select>
-          <input className="input w-32" type="number" placeholder="السعر" value={shippingPrice} onChange={(e) => setShippingPrice(e.target.value)} />
+          <input className="input w-32" type="number" min="0" step="0.01" placeholder="السعر" value={shippingPrice} onChange={(e) => setShippingPrice(e.target.value)} />
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => shippingMutation.mutate({ city_id: parseInt(shippingCity), price: parseFloat(shippingPrice) })}
-            disabled={!shippingCity || !shippingPrice}
+            onClick={() => {
+              const price = parseFloat(shippingPrice);
+              if (Number.isNaN(price) || price < 0) return;
+              shippingMutation.mutate({ city_id: parseInt(shippingCity, 10), price });
+            }}
+            disabled={!shippingCity || shippingPrice === '' || Number(shippingPrice) < 0}
           >
             تحديث
           </button>

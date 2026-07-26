@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
-import { FieldError } from './ui';
+import { FieldError, FormAlert } from './ui';
+import { notifyError } from '../utils/notify';
 
 const emptyVariant = () => ({
   color_id: '', size_id: '', sku: '', barcode: '', price: '', stock: '', image: '',
@@ -27,8 +28,15 @@ const defaultForm = {
   variants: [emptyVariant()],
 };
 
+function isNegativeNumber(value) {
+  if (value === '' || value === null || value === undefined) return false;
+  const num = Number(value);
+  return !Number.isNaN(num) && num < 0;
+}
+
 export function ProductForm({ initial, categories, colors, sizes, brands, onSubmit, loading, getFieldError = () => '' }) {
   const [form, setForm] = useState(defaultForm);
+  const [clientError, setClientError] = useState('');
 
   useEffect(() => {
     if (initial) {
@@ -43,7 +51,7 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
         description: initial.description || '',
         category_id: initial.category_id || '',
         brand_id: initial.brand_id || '',
-        stock: initial.total_stock || '',
+        stock: initial.total_stock ?? '',
         status: initial.status || 'active',
         is_featured: !!initial.is_featured,
         is_new: !!initial.is_new,
@@ -57,7 +65,7 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
               sku: v.sku || '',
               barcode: v.barcode || '',
               price: v.price || '',
-              stock: v.stock || '',
+              stock: v.stock ?? '',
               image: v.image || '',
             }))
           : [emptyVariant()],
@@ -65,6 +73,7 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
     } else {
       setForm(defaultForm);
     }
+    setClientError('');
   }, [initial]);
 
   const updateVariant = (index, field, value) => {
@@ -73,19 +82,42 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
     setForm({ ...form, variants });
   };
 
+  const validateNonNegative = () => {
+    if (isNegativeNumber(form.price)) return 'السعر لا يمكن أن يكون سالباً';
+    if (isNegativeNumber(form.compare_price)) return 'سعر قبل الخصم لا يمكن أن يكون سالباً';
+    if (isNegativeNumber(form.cost_price)) return 'سعر التكلفة لا يمكن أن يكون سالباً';
+    if (!form.has_variants && isNegativeNumber(form.stock)) return 'الكمية لا يمكن أن تكون سالبة';
+
+    if (form.has_variants) {
+      for (const v of form.variants) {
+        if (isNegativeNumber(v.stock)) return 'كمية المتغير لا يمكن أن تكون سالبة';
+        if (isNegativeNumber(v.price)) return 'سعر المتغير لا يمكن أن يكون سالباً';
+      }
+    }
+    return '';
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const error = validateNonNegative();
+    if (error) {
+      setClientError(error);
+      notifyError({ message: error });
+      return;
+    }
+    setClientError('');
+
     const payload = {
       name_ar: form.name_ar,
       name_en: form.name_en || null,
       price: parseFloat(form.price),
-      compare_price: form.compare_price ? parseFloat(form.compare_price) : null,
-      cost_price: form.cost_price ? parseFloat(form.cost_price) : 0,
+      compare_price: form.compare_price !== '' ? parseFloat(form.compare_price) : null,
+      cost_price: form.cost_price !== '' ? parseFloat(form.cost_price) : 0,
       sku: form.sku || null,
       barcode: form.barcode || null,
       description: form.description || null,
-      category_id: form.category_id ? parseInt(form.category_id) : null,
-      brand_id: form.brand_id ? parseInt(form.brand_id) : null,
+      category_id: form.category_id ? parseInt(form.category_id, 10) : null,
+      brand_id: form.brand_id ? parseInt(form.brand_id, 10) : null,
       status: form.status,
       is_featured: form.is_featured,
       is_new: form.is_new,
@@ -95,19 +127,19 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
 
     if (form.has_variants) {
       payload.variants = form.variants
-        .filter((v) => v.color_id || v.size_id || v.stock)
+        .filter((v) => v.color_id || v.size_id || v.stock !== '')
         .map((v) => ({
           id: v.id,
-          color_id: v.color_id ? parseInt(v.color_id) : null,
-          size_id: v.size_id ? parseInt(v.size_id) : null,
+          color_id: v.color_id ? parseInt(v.color_id, 10) : null,
+          size_id: v.size_id ? parseInt(v.size_id, 10) : null,
           sku: v.sku || null,
           barcode: v.barcode || null,
-          price: v.price ? parseFloat(v.price) : parseFloat(form.price),
-          stock: parseInt(v.stock) || 0,
+          price: v.price !== '' ? parseFloat(v.price) : parseFloat(form.price),
+          stock: v.stock !== '' ? parseInt(v.stock, 10) : 0,
           image: v.image || null,
         }));
     } else {
-      payload.stock = parseInt(form.stock) || 0;
+      payload.stock = form.stock !== '' ? parseInt(form.stock, 10) : 0;
     }
 
     onSubmit(payload);
@@ -115,15 +147,37 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto px-1">
+      <FormAlert message={clientError} />
+
       <input className="input" placeholder="اسم المنتج *" required value={form.name_ar} onChange={(e) => setForm({ ...form, name_ar: e.target.value })} />
       <FieldError message={getFieldError('name_ar')} />
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <input className="input" type="number" step="0.01" placeholder="السعر *" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="السعر *"
+            required
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+          />
           <FieldError message={getFieldError('price')} />
         </div>
-        <input className="input" type="number" step="0.01" placeholder="سعر قبل الخصم" value={form.compare_price} onChange={(e) => setForm({ ...form, compare_price: e.target.value })} />
+        <div>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="سعر قبل الخصم"
+            value={form.compare_price}
+            onChange={(e) => setForm({ ...form, compare_price: e.target.value })}
+          />
+          <FieldError message={getFieldError('compare_price')} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -168,7 +222,18 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
       </select>
 
       {!form.has_variants ? (
-        <input className="input" type="number" placeholder="المخzون" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
+        <div>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="المخزون"
+            value={form.stock}
+            onChange={(e) => setForm({ ...form, stock: e.target.value })}
+          />
+          <FieldError message={getFieldError('stock')} />
+        </div>
       ) : (
         <div className="space-y-4 border rounded-lg p-4 dark:border-gray-600">
           <div className="flex items-center justify-between">
@@ -189,8 +254,30 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
                   {sizes?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
                 <input className="input text-sm" placeholder="SKU" value={v.sku} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} />
-                <input className="input text-sm" type="number" placeholder="الكمية" value={v.stock} onChange={(e) => updateVariant(idx, 'stock', e.target.value)} />
-                <input className="input text-sm" type="number" step="0.01" placeholder="سعر (اختياري)" value={v.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} />
+                <div>
+                  <input
+                    className="input text-sm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="الكمية"
+                    value={v.stock}
+                    onChange={(e) => updateVariant(idx, 'stock', e.target.value)}
+                  />
+                  <FieldError message={getFieldError(`variants.${idx}.stock`)} />
+                </div>
+                <div>
+                  <input
+                    className="input text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="سعر (اختياري)"
+                    value={v.price}
+                    onChange={(e) => updateVariant(idx, 'price', e.target.value)}
+                  />
+                  <FieldError message={getFieldError(`variants.${idx}.price`)} />
+                </div>
               </div>
               <ImageUpload label="صورة المتغير" value={v.image} onChange={(url) => updateVariant(idx, 'image', url)} />
               {form.variants.length > 1 && (
