@@ -31,7 +31,7 @@ export default function HomePage() {
         ) : (
           <div className="h-64 md:h-96 bg-gradient-to-l from-primary-600 to-primary-800 flex items-center">
             <div className="container mx-auto px-4 text-white">
-              <h1 className="text-3xl md:text-5xl font-bold mb-4">مرحباً بكم في كرام ستور</h1>
+              <h1 className="text-3xl md:text-5xl font-bold mb-4">مرحباً بكم في متجر كرم</h1>
               <p className="text-lg opacity-90 mb-6">أفضل المنتجات بأسعار منافسة - الدفع عند الاستلام</p>
               <Link to="/products" className="btn bg-white text-primary-700">تسوق الآن</Link>
             </div>

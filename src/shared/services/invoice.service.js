@@ -1,6 +1,6 @@
 import { ORDER_STATUS, formatPrice } from '@core/constants';
 
-export function printOrderInvoice(order, storeName = 'كرام ستور') {
+export function printOrderInvoice(order, storeName = 'متجر كرم') {
   const statusLabel = ORDER_STATUS[order.status]?.label || order.status;
   const itemsRows = (order.items || [])
     .map(

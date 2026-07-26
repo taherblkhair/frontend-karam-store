@@ -57,7 +57,7 @@ export default function AdminLayout() {
       >
         <div className="p-6 border-b dark:border-gray-700 flex items-start justify-between gap-2">
           <div>
-            <Link to="/" className="text-xl font-bold text-primary-600">كرام ستور</Link>
+            <Link to="/" className="text-xl font-bold text-primary-600">متجر كرم</Link>
             <p className="text-sm text-gray-500 mt-1">{user?.name}</p>
           </div>
           {isPos && (

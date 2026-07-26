@@ -16,7 +16,7 @@ export default function StoreLayout({ children }) {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b dark:bg-gray-900/95 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="text-2xl font-bold text-primary-600">كرام ستور</Link>
+            <Link to="/" className="text-2xl font-bold text-primary-600">متجر كرم</Link>
 
             <nav className="hidden md:flex items-center gap-6">
               <Link to="/" className="hover:text-primary-600 transition">الرئيسية</Link>
@@ -67,7 +67,7 @@ export default function StoreLayout({ children }) {
       <footer className="bg-gray-900 text-gray-300 py-12 mt-auto">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-white text-lg font-bold mb-4">كرام ستور</h3>
+            <h3 className="text-white text-lg font-bold mb-4">متجر كرم</h3>
             <p className="text-sm">متجر إلكتروني ليبي - الدفع عند الاستلام</p>
           </div>
           <div>
@@ -84,7 +84,7 @@ export default function StoreLayout({ children }) {
           </div>
         </div>
         <div className="container mx-auto px-4 mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-          © 2026 كرام ستور - جميع الحقوق محفوظة
+          © 2026 متجر كرم - جميع الحقوق محفوظة
         </div>
       </footer>
     </div>
