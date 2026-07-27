@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
+import { CategoryCard } from '@modules/store/components/CategoryCard';
 
 export default function ProductsPage() {
   const [params, setParams] = useSearchParams();
@@ -48,11 +49,27 @@ export default function ProductsPage() {
 
   const products = productsData?.data || [];
   const pagination = productsData?.pagination;
+  const categories = categoriesData?.data || [];
 
   return (
     <StoreLayout>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">المنتجات</h1>
+
+        {categories.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3">التصنيفات</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {categories.map((cat) => (
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  active={String(filters.category) === String(cat.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
@@ -72,7 +89,7 @@ export default function ProductsPage() {
               <h3 className="font-bold mb-3">الفئة</h3>
               <select className="input" value={filters.category} onChange={(e) => updateFilter('category', e.target.value)}>
                 <option value="">الكل</option>
-                {categoriesData?.data?.map((c) => (
+                {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name_ar}</option>
                 ))}
               </select>

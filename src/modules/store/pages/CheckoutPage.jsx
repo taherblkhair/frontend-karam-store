@@ -84,11 +84,16 @@ export default function CheckoutPage() {
       }
     }
 
+    const areas = areasData?.data || [];
+    if (areas.length > 0 && !form.area_id) {
+      return notifyError({ message: 'اختر المنطقة' });
+    }
+
     orderMutation.mutate({
       customer_name: form.customer_name,
       customer_phone: form.customer_phone,
-      city_id: parseInt(form.city_id),
-      area_id: parseInt(form.area_id),
+      city_id: parseInt(form.city_id, 10),
+      area_id: form.area_id ? parseInt(form.area_id, 10) : null,
       address: form.address,
       notes: form.notes,
       items: items.map((i) => ({
@@ -155,12 +160,27 @@ export default function CheckoutPage() {
                 </div>
                 <select className="input" required value={form.city_id} onChange={(e) => setForm({ ...form, city_id: e.target.value, area_id: '' })}>
                   <option value="">اختر المدينة</option>
-                  {citiesData?.data?.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+                  {citiesData?.data?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name_ar}
+                      {c.shipping_price != null ? ` — شحن ${c.shipping_price} د.ل` : ''}
+                    </option>
+                  ))}
                 </select>
-                <select className="input" required value={form.area_id} onChange={(e) => setForm({ ...form, area_id: e.target.value })} disabled={!form.city_id}>
-                  <option value="">اختر المنطقة</option>
-                  {areasData?.data?.map((a) => <option key={a.id} value={a.id}>{a.name_ar}</option>)}
-                </select>
+                {(areasData?.data?.length > 0 || !form.city_id) && (
+                  <select
+                    className="input"
+                    required={!!areasData?.data?.length}
+                    value={form.area_id}
+                    onChange={(e) => setForm({ ...form, area_id: e.target.value })}
+                    disabled={!form.city_id}
+                  >
+                    <option value="">اختر المنطقة</option>
+                    {areasData?.data?.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name_ar}</option>
+                    ))}
+                  </select>
+                )}
                 <textarea className="input" placeholder="العنوان التفصيلي" required rows={3} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                 <textarea className="input" placeholder="ملاحظات (اختياري)" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>

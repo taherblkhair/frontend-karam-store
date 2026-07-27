@@ -6,3 +6,4 @@ export { ProductSelector } from './components/ProductSelector';
 export { CartTable } from './components/CartTable';
 export { PaymentSection } from './components/PaymentSection';
 export { VariantPickerModal } from './components/VariantPickerModal';
+export { RecentPosOrders } from './components/RecentPosOrders';

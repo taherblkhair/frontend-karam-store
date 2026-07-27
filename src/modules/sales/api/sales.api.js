@@ -3,6 +3,9 @@ import { endpoints } from '@core/api/endpoints';
 
 export const salesApi = {
   createSale: (data) => api.post(endpoints.pos.sale, data),
+  recentOrders: (limit = 10) =>
+    api.get(endpoints.pos.recentOrders, { params: { limit } }),
+  cities: () => api.get(endpoints.cities),
   readyProducts: () =>
     api.get(endpoints.products, { params: { admin: 'true', limit: 10 } }),
   searchProducts: (search) =>

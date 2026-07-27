@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Search, X, Clock } from 'lucide-react';
 import { notifyError } from '@shared/services/toast.service';
 import { useConfirm } from '@shared/hooks/useConfirm';
 import { salesApi } from '@modules/sales/api/sales.api';
@@ -11,6 +12,7 @@ import { VariantPickerModal } from '@modules/sales/components/VariantPickerModal
 import { ProductSelector } from '@modules/sales/components/ProductSelector';
 import { CartTable } from '@modules/sales/components/CartTable';
 import { PaymentSection } from '@modules/sales/components/PaymentSection';
+import { RecentPosOrders } from '@modules/sales/components/RecentPosOrders';
 
 export default function POSPage() {
   const confirm = useConfirm();
@@ -19,14 +21,22 @@ export default function POSPage() {
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [areaText, setAreaText] = useState('');
   const [pickingId, setPickingId] = useState(null);
   const [variantProduct, setVariantProduct] = useState(null);
+  const [recentOpen, setRecentOpen] = useState(false);
   const searchRef = useRef(null);
 
   const isSearching = search.trim().length >= 2;
 
   const { data: readyProducts, isLoading: readyLoading } = usePosReadyProducts();
   const { data: searchResults, isFetching: searchLoading } = usePosSearch(search);
+  const { data: citiesData } = useQuery({
+    queryKey: ['pos-cities'],
+    queryFn: () => salesApi.cities(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const saleMutation = useCreateSale({
     onSuccess: () => {
@@ -34,6 +44,8 @@ export default function POSPage() {
       setDiscount(0);
       setCustomerName('');
       setCustomerPhone('');
+      setCityId('');
+      setAreaText('');
       setSearch('');
       searchRef.current?.focus();
     },
@@ -148,7 +160,6 @@ export default function POSPage() {
       const res = await salesApi.getByBarcode(barcode);
       const p = res.data;
 
-      // Barcode matched a specific variant — add directly
       if (p.variant_id) {
         addToCart(p, {
           variantId: p.variant_id,
@@ -160,7 +171,6 @@ export default function POSPage() {
         return;
       }
 
-      // Product-level barcode — open variant picker if needed
       await handleSelectProduct(p);
     } catch {
       notifyError({ message: 'المنتج غير موجود' });
@@ -183,16 +193,22 @@ export default function POSPage() {
     });
     if (!ok) return;
 
-    saleMutation.mutate({
+    const payload = {
       customer_name: customerName || 'عميل POS',
       customer_phone: customerPhone || '0000000000',
       discount,
+      shipping_cost: 0,
       items: cart.map((i) => ({
         product_id: i.product_id,
         variant_id: i.variant_id,
         quantity: i.quantity,
       })),
-    });
+    };
+
+    if (cityId) payload.city_id = parseInt(cityId, 10);
+    if (areaText.trim()) payload.address = areaText.trim();
+
+    saleMutation.mutate(payload);
   };
 
   const displayProducts = isSearching ? (searchResults?.data || []) : (readyProducts?.data || []);
@@ -225,6 +241,14 @@ export default function POSPage() {
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setRecentOpen(true)}
+          className="btn-secondary h-12 whitespace-nowrap"
+        >
+          <Clock size={18} />
+          آخر الطلبات
+        </button>
         <div className="text-sm text-gray-500 whitespace-nowrap">
           {itemCount > 0 ? `${itemCount} قطعة في السلة` : 'السلة فارغة'}
         </div>
@@ -255,6 +279,11 @@ export default function POSPage() {
             setCustomerName={setCustomerName}
             customerPhone={customerPhone}
             setCustomerPhone={setCustomerPhone}
+            cityId={cityId}
+            setCityId={setCityId}
+            areaText={areaText}
+            setAreaText={setAreaText}
+            cities={citiesData?.data || []}
             discount={discount}
             setDiscount={setDiscount}
             subtotal={subtotal}
@@ -272,6 +301,8 @@ export default function POSPage() {
         onClose={() => setVariantProduct(null)}
         onConfirm={confirmVariant}
       />
+
+      <RecentPosOrders open={recentOpen} onClose={() => setRecentOpen(false)} />
     </div>
   );
 }

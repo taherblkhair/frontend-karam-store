@@ -1,4 +1,4 @@
-import { CreditCard } from 'lucide-react';
+import { CreditCard, MapPin } from 'lucide-react';
 import { formatPrice } from '@core/constants';
 
 export function PaymentSection({
@@ -6,6 +6,11 @@ export function PaymentSection({
   setCustomerName,
   customerPhone,
   setCustomerPhone,
+  cityId,
+  setCityId,
+  areaText,
+  setAreaText,
+  cities = [],
   discount,
   setDiscount,
   subtotal,
@@ -28,6 +33,29 @@ export function PaymentSection({
           placeholder="الهاتف"
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <MapPin size={12} />
+          <span>التوصيل (اختياري)</span>
+        </div>
+        <select
+          className="input text-sm"
+          value={cityId}
+          onChange={(e) => setCityId(e.target.value)}
+        >
+          <option value="">المدينة — اختياري</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>{c.name_ar}</option>
+          ))}
+        </select>
+        <input
+          className="input text-sm"
+          placeholder="المنطقة — اختياري (مثال: قرقارش)"
+          value={areaText}
+          onChange={(e) => setAreaText(e.target.value)}
         />
       </div>
 

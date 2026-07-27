@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner } from '@shared/ui';
+import { CategoryCard } from '@modules/store/components/CategoryCard';
 
 export default function HomePage() {
   const { data, isLoading } = useQuery({
@@ -45,14 +46,9 @@ export default function HomePage() {
           {home?.categories?.length > 0 && (
             <section className="container mx-auto px-4 py-12">
               <h2 className="text-2xl font-bold mb-6">التصنيفات</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {home.categories.map((cat) => (
-                  <Link key={cat.id} to={`/products?category=${cat.id}`} className="card p-6 text-center hover:shadow-md transition">
-                    <div className="w-16 h-16 mx-auto mb-3 bg-primary-50 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl">
-                      📦
-                    </div>
-                    <h3 className="font-medium">{cat.name_ar}</h3>
-                  </Link>
+                  <CategoryCard key={cat.id} category={cat} />
                 ))}
               </div>
             </section>

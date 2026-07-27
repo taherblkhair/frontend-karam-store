@@ -26,6 +26,7 @@ export const endpoints = {
   shippingRates: '/shipping-rates',
   pos: {
     sale: '/pos/sale',
+    recentOrders: '/pos/recent-orders',
   },
   store: {
     home: '/store/home',

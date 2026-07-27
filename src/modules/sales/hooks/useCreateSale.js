@@ -10,6 +10,7 @@ export function useCreateSale({ onSuccess } = {}) {
     onSuccess: (res) => {
       notifySuccess(res);
       queryClient.invalidateQueries({ queryKey: ['pos-ready-products'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-recent-orders'] });
       onSuccess?.(res);
     },
     onError: notifyError,
