@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Package } from 'lucide-react';
+import { ClipboardList, Package, Loader2 } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useListParams } from '@shared/hooks/useListParams';
 import { useConfirm } from '@shared/hooks/useConfirm';
 import { inventoryApi } from '@modules/inventory/api/inventory.api';
+import { productsApi } from '@modules/products/api/products.api';
 import { LoadingSpinner, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
 
@@ -24,11 +25,30 @@ const TABS = [
   { id: 'manage', label: 'تعديل وحركات' },
 ];
 
+const emptyAdjust = {
+  product_id: '',
+  variant_id: '',
+  quantity: '',
+  type: 'in',
+  notes: '',
+};
+
+function variantLabel(v) {
+  const parts = [v.color_name, v.size_name].filter(Boolean);
+  const label = parts.join(' / ') || `متغير #${v.id}`;
+  const sku = v.sku ? ` — ${v.sku}` : '';
+  const stock = v.stock != null ? ` (المخزون: ${v.stock})` : '';
+  return `${label}${sku}${stock}`;
+}
+
 export default function InventoryPage() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('levels');
-  const [adjustForm, setAdjustForm] = useState({ product_id: '', quantity: '', type: 'in', notes: '' });
+  const [adjustForm, setAdjustForm] = useState(emptyAdjust);
+  const [variants, setVariants] = useState([]);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [loadingVariants, setLoadingVariants] = useState(false);
   const { search, setSearch, page, setPage, params } = useListParams();
 
   const { data: levelsData, isLoading: levelsLoading } = useQuery({
@@ -54,6 +74,40 @@ export default function InventoryPage() {
     enabled: tab === 'manage',
   });
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadVariants(productId) {
+      if (!productId) {
+        setVariants([]);
+        setHasVariants(false);
+        return;
+      }
+      setLoadingVariants(true);
+      try {
+        const res = await productsApi.getById(productId);
+        const product = res?.data;
+        if (cancelled) return;
+        const list = (product?.variants || []).filter((v) => v.is_active !== false);
+        setHasVariants(Boolean(product?.has_variants) && list.length > 0);
+        setVariants(list);
+      } catch (err) {
+        if (!cancelled) {
+          setVariants([]);
+          setHasVariants(false);
+          notifyError(err);
+        }
+      } finally {
+        if (!cancelled) setLoadingVariants(false);
+      }
+    }
+
+    loadVariants(adjustForm.product_id);
+    return () => {
+      cancelled = true;
+    };
+  }, [adjustForm.product_id]);
+
   const adjustMutation = useMutation({
     mutationFn: inventoryApi.adjust,
     onSuccess: (res) => {
@@ -61,7 +115,9 @@ export default function InventoryPage() {
       queryClient.invalidateQueries(['inventory-levels']);
       queryClient.invalidateQueries(['low-stock']);
       notifySuccess(res);
-      setAdjustForm({ product_id: '', quantity: '', type: 'in', notes: '' });
+      setAdjustForm(emptyAdjust);
+      setVariants([]);
+      setHasVariants(false);
     },
     onError: notifyError,
   });
@@ -69,6 +125,18 @@ export default function InventoryPage() {
   const levels = levelsData?.data || [];
   const rows = movements?.data || [];
   const products = productsData?.data || [];
+
+  const prefillAdjust = (row) => {
+    setTab('manage');
+    setPage(1);
+    setAdjustForm({
+      product_id: String(row.product_id),
+      variant_id: row.variant_id ? String(row.variant_id) : '',
+      quantity: '',
+      type: 'in',
+      notes: '',
+    });
+  };
 
   return (
     <div>
@@ -151,6 +219,7 @@ export default function InventoryPage() {
                     <th className="text-right p-4">المتغير</th>
                     <th className="text-right p-4">SKU</th>
                     <th className="text-right p-4">الكمية الحالية</th>
+                    <th className="text-right p-4">إجراء</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -179,6 +248,15 @@ export default function InventoryPage() {
                             {row.quantity}
                           </span>
                         </td>
+                        <td className="p-4">
+                          <button
+                            type="button"
+                            className="text-primary-600 text-xs font-medium hover:underline"
+                            onClick={() => prefillAdjust(row)}
+                          >
+                            تعديل
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -203,38 +281,89 @@ export default function InventoryPage() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+                if (hasVariants && !adjustForm.variant_id) {
+                  notifyError({ message: 'اختر المتغير (لون / مقاس)' });
+                  return;
+                }
                 const product = products.find((p) => String(p.id) === String(adjustForm.product_id));
+                const variant = variants.find((v) => String(v.id) === String(adjustForm.variant_id));
                 const actionLabel = adjustForm.type === 'out' ? 'خصم' : 'إضافة';
+                const variantPart = variant
+                  ? ` — ${[variant.color_name, variant.size_name].filter(Boolean).join(' / ')}`
+                  : '';
                 const ok = await confirm({
                   title: `${actionLabel} مخزون`,
-                  message: `تأكيد ${actionLabel} كمية ${adjustForm.quantity} من «${product?.name_ar || 'المنتج'}»؟`,
+                  message: `تأكيد ${actionLabel} كمية ${adjustForm.quantity} من «${product?.name_ar || 'المنتج'}${variantPart}»؟`,
                   confirmText: 'تطبيق',
                   variant: adjustForm.type === 'out' ? 'danger' : 'warning',
                 });
                 if (!ok) return;
-                adjustMutation.mutate({
+                const payload = {
                   product_id: parseInt(adjustForm.product_id, 10),
                   quantity: parseInt(adjustForm.quantity, 10),
                   type: adjustForm.type,
-                  notes: adjustForm.notes,
-                });
+                  notes: adjustForm.notes || undefined,
+                };
+                if (adjustForm.variant_id) {
+                  payload.variant_id = parseInt(adjustForm.variant_id, 10);
+                }
+                adjustMutation.mutate(payload);
               }}
-              className="grid md:grid-cols-4 gap-4"
+              className="grid md:grid-cols-2 xl:grid-cols-5 gap-4"
             >
-              <select
-                className="input"
-                required
-                value={adjustForm.product_id}
-                onChange={(e) => setAdjustForm({ ...adjustForm, product_id: e.target.value })}
-              >
-                <option value="">اختر المنتج</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name_ar}
-                    {p.sku ? ` — ${p.sku}` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  className="input"
+                  required
+                  value={adjustForm.product_id}
+                  onChange={(e) =>
+                    setAdjustForm({
+                      ...adjustForm,
+                      product_id: e.target.value,
+                      variant_id: '',
+                    })
+                  }
+                >
+                  <option value="">اختر المنتج</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name_ar}
+                      {p.sku ? ` — ${p.sku}` : ''}
+                      {p.has_variants ? ' (بمتغيرات)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {loadingVariants && (
+                  <Loader2
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 animate-spin text-gray-400"
+                  />
+                )}
+              </div>
+
+              {hasVariants ? (
+                <select
+                  className="input"
+                  required
+                  value={adjustForm.variant_id}
+                  onChange={(e) => setAdjustForm({ ...adjustForm, variant_id: e.target.value })}
+                  disabled={loadingVariants}
+                >
+                  <option value="">اختر المتغير *</option>
+                  {variants.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {variantLabel(v)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="input bg-gray-50 dark:bg-gray-800/50 text-gray-400 flex items-center">
+                  {adjustForm.product_id && !loadingVariants
+                    ? 'منتج بدون متغيرات'
+                    : 'المتغير'}
+                </div>
+              )}
+
               <input
                 className="input"
                 type="number"
@@ -252,9 +381,15 @@ export default function InventoryPage() {
                 <option value="in">إضافة</option>
                 <option value="out">خصم</option>
               </select>
-              <button type="submit" className="btn-primary" disabled={adjustMutation.isPending}>
+              <button type="submit" className="btn-primary" disabled={adjustMutation.isPending || loadingVariants}>
                 تطبيق
               </button>
+              <input
+                className="input md:col-span-2 xl:col-span-5"
+                placeholder="ملاحظات (اختياري)"
+                value={adjustForm.notes}
+                onChange={(e) => setAdjustForm({ ...adjustForm, notes: e.target.value })}
+              />
             </form>
           </div>
 
@@ -265,30 +400,36 @@ export default function InventoryPage() {
             ) : rows.length === 0 ? (
               <EmptyState message="لا توجد حركات" />
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="text-right p-4">المنتج</th>
-                    <th className="text-right p-4">النوع</th>
-                    <th className="text-right p-4">الكمية</th>
-                    <th className="text-right p-4">قبل</th>
-                    <th className="text-right p-4">بعد</th>
-                    <th className="text-right p-4">التاريخ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((m) => (
-                    <tr key={m.id} className="border-t dark:border-gray-700">
-                      <td className="p-4">{m.product_name}</td>
-                      <td className="p-4">{MOVEMENT_LABELS[m.type] || m.type}</td>
-                      <td className="p-4">{m.quantity}</td>
-                      <td className="p-4">{m.previous_qty}</td>
-                      <td className="p-4">{m.new_qty}</td>
-                      <td className="p-4">{new Date(m.created_at).toLocaleDateString('ar')}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="text-right p-4">المنتج</th>
+                      <th className="text-right p-4">المتغير</th>
+                      <th className="text-right p-4">النوع</th>
+                      <th className="text-right p-4">الكمية</th>
+                      <th className="text-right p-4">قبل</th>
+                      <th className="text-right p-4">بعد</th>
+                      <th className="text-right p-4">التاريخ</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((m) => (
+                      <tr key={m.id} className="border-t dark:border-gray-700">
+                        <td className="p-4">{m.product_name}</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-300">
+                          {m.variant_info || '—'}
+                        </td>
+                        <td className="p-4">{MOVEMENT_LABELS[m.type] || m.type}</td>
+                        <td className="p-4">{m.quantity}</td>
+                        <td className="p-4">{m.previous_qty}</td>
+                        <td className="p-4">{m.new_qty}</td>
+                        <td className="p-4">{new Date(m.created_at).toLocaleDateString('ar')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
           <Pagination pagination={movements?.pagination} page={page} onPageChange={setPage} />

@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, FolderTree, Warehouse, ShoppingBag,
-  Users, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, X
+  Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@core/auth/AuthContext';
@@ -17,6 +17,7 @@ const adminLinks = [
   { to: '/admin/banners', icon: Image, label: 'البنرات' },
   { to: '/admin/orders', icon: ShoppingBag, label: 'الطلبات' },
   { to: '/admin/customers', icon: Users, label: 'العملاء' },
+  { to: '/admin/users', icon: UserCog, label: 'المستخدمون', permission: 'users.manage' },
   { to: '/admin/reports', icon: BarChart3, label: 'التقارير' },
   { to: '/admin/settings', icon: Settings, label: 'الإعدادات' },
 ];
@@ -35,7 +36,9 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isPos = location.pathname.startsWith('/admin/pos');
-  const links = isAdmin ? adminLinks : salesLinks;
+  const links = (isAdmin ? adminLinks : salesLinks).filter(
+    (link) => !link.permission || hasPermission(link.permission)
+  );
 
   useEffect(() => {
     if (isPos) setSidebarOpen(false);

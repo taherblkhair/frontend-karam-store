@@ -22,6 +22,7 @@ import OrdersPage from '@modules/orders/pages/OrdersPage';
 import CustomersPage from '@modules/customers/pages/CustomersPage';
 import ReportsPage from '@modules/reports/pages/ReportsPage';
 import SettingsPage from '@modules/settings/pages/SettingsPage';
+import UsersPage from '@modules/users/pages/UsersPage';
 import POSPage from '@modules/sales/pages/POSPage';
 
 export function AppRouter() {
@@ -54,6 +55,7 @@ export function AppRouter() {
             <Route path="banners" element={<BannersPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="customers" element={<CustomersPage />} />
+            <Route path="users" element={<UsersPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="pos" element={<POSPage />} />

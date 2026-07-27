@@ -23,6 +23,7 @@ export const endpoints = {
   banners: '/banners',
   orders: '/orders',
   customers: '/customers',
+  users: '/users',
   settings: '/settings',
   cities: '/cities',
   shippingRates: '/shipping-rates',
