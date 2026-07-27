@@ -14,6 +14,7 @@ import DashboardPage from '@modules/dashboard/pages/DashboardPage';
 import ProductListPage from '@modules/products/pages/ProductListPage';
 import CategoriesPage from '@modules/categories/pages/CategoriesPage';
 import InventoryPage from '@modules/inventory/pages/InventoryPage';
+import StocktakingPage from '@modules/inventory/pages/StocktakingPage';
 import PurchasesPage from '@modules/purchases/pages/PurchasesPage';
 import SuppliersPage from '@modules/suppliers/pages/SuppliersPage';
 import BannersPage from '@modules/banners/pages/BannersPage';
@@ -46,6 +47,8 @@ export function AppRouter() {
             <Route path="products" element={<ProductListPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="inventory" element={<InventoryPage />} />
+            <Route path="inventory/stocktaking" element={<StocktakingPage />} />
+            <Route path="inventory/stocktaking/:id" element={<StocktakingPage />} />
             <Route path="purchases" element={<PurchasesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="banners" element={<BannersPage />} />

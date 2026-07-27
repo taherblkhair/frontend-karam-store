@@ -13,8 +13,10 @@ export const endpoints = {
   inventory: {
     root: '/inventory',
     movements: '/inventory/movements',
+    levels: '/inventory/levels',
     lowStock: '/inventory/low-stock',
     adjust: '/inventory/adjust',
+    stocktakings: '/inventory/stocktakings',
   },
   purchases: '/purchases',
   suppliers: '/suppliers',
