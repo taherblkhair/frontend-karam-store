@@ -10,6 +10,7 @@ import {
   useSaveProduct,
   useDeleteProduct,
   useSeedDemoProducts,
+  useSeedHandbags,
   fetchProduct,
 } from '@modules/products/hooks/useProducts';
 import { LoadingSpinner, Modal, EmptyState } from '@shared/ui';
@@ -42,6 +43,7 @@ export default function AdminProductsPage() {
 
   const deleteMutation = useDeleteProduct();
   const seedMutation = useSeedDemoProducts();
+  const handbagsMutation = useSeedHandbags();
 
   const openCreate = () => {
     setEditing(null);
@@ -85,10 +87,27 @@ export default function AdminProductsPage() {
               });
               if (ok) seedMutation.mutate();
             }}
-            disabled={seedMutation.isPending}
+            disabled={seedMutation.isPending || handbagsMutation.isPending}
             className="btn-secondary"
           >
             <Sparkles size={16} /> منتجات تجريبية
+          </button>
+          <button
+            onClick={async () => {
+              const ok = await confirm({
+                title: 'حقائب نسائية (100)',
+                message:
+                  'إضافة 100 حقيبة نسائية من ماركات (Coach, LV, Dior, …) مع 4–5 متغيرات وصور لكل موديل. يُتخطى إن كانت موجودة مسبقاً.',
+                confirmText: 'إضافة الحقائب',
+                variant: 'warning',
+              });
+              if (ok) handbagsMutation.mutate();
+            }}
+            disabled={handbagsMutation.isPending || seedMutation.isPending}
+            className="btn-secondary"
+          >
+            <Sparkles size={16} />
+            {handbagsMutation.isPending ? 'جاري الإضافة…' : 'حقائب نسائية (100)'}
           </button>
           <button onClick={openCreate} className="btn-primary">
             <Plus size={18} /> إضافة
@@ -99,7 +118,7 @@ export default function AdminProductsPage() {
       {isLoading ? (
         <LoadingSpinner />
       ) : products.length === 0 ? (
-        <EmptyState message="لا توجد منتجات — أضف منتجاً أو استخدم «منتجات تجريبية»" />
+        <EmptyState message="لا توجد منتجات — أضف منتجاً أو استخدم «حقائب نسائية (100)»" />
       ) : (
         <>
           <div className="card overflow-hidden">

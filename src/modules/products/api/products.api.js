@@ -10,6 +10,7 @@ export const productsApi = {
   remove: (id) => api.delete(`${endpoints.products}/${id}`),
   save: ({ id, data }) => (id ? productsApi.update(id, data) : productsApi.create(data)),
   seedDemo: () => api.post(`${endpoints.products}/seed-demo`),
+  seedHandbags: () => api.post(`${endpoints.products}/seed-handbags`),
   colors: () => api.get(endpoints.colors),
   sizes: () => api.get(endpoints.sizes),
   brands: () => api.get(endpoints.brands),

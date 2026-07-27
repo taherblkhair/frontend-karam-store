@@ -84,6 +84,18 @@ export function useSeedDemoProducts() {
   });
 }
 
+export function useSeedHandbags() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: productsApi.seedHandbags,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: productKeys.all });
+      notifySuccess(res);
+    },
+    onError: notifyError,
+  });
+}
+
 export async function fetchProduct(id) {
   const res = await productsApi.getById(id);
   return res.data;
