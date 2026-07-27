@@ -194,7 +194,7 @@ export default function CheckoutPage() {
                 </label>
                 {createAccount && (
                   <div>
-                    <input type="password" className="input" placeholder="كلمة المرور" required={createAccount} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <input type="password" className="input" placeholder="كلمة المرور (8 أحرف على الأقل)" required={createAccount} minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
                     <FieldError message={getFieldError('password')} />
                   </div>
                 )}
