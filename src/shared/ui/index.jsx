@@ -1,24 +1,136 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
 
+function buildProductGallery(product) {
+  const items = [];
+  const seen = new Set();
+
+  const push = (entry) => {
+    if (!entry?.image || seen.has(entry.image)) return;
+    seen.add(entry.image);
+    items.push(entry);
+  };
+
+  push({
+    id: 'primary',
+    image: product.primary_image,
+    hex_code: null,
+    color_name: null,
+  });
+
+  for (const v of product.variants || []) {
+    push({
+      id: `v-${v.id}`,
+      image: v.image,
+      hex_code: v.hex_code || null,
+      color_name: v.color_name || null,
+    });
+  }
+
+  return items;
+}
+
 export function ProductCard({ product }) {
-  const hasDiscount = product.compare_price && parseFloat(product.compare_price) > parseFloat(product.price);
+  const gallery = useMemo(() => buildProductGallery(product), [product]);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const active = gallery[Math.min(activeIdx, Math.max(gallery.length - 1, 0))];
+  const hasDiscount =
+    product.compare_price && parseFloat(product.compare_price) > parseFloat(product.price);
+  const showVariantPicker = gallery.length > 1;
 
   return (
-    <Link to={`/products/${product.slug || product.id}`} className="card group overflow-hidden hover:shadow-lg transition-shadow">
+    <Link
+      to={`/products/${product.slug || product.id}`}
+      className="card group overflow-hidden hover:shadow-lg transition-shadow"
+    >
       <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
-        {product.primary_image ? (
-          <img src={product.primary_image} alt={product.name_ar} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        {active?.image ? (
+          <img
+            src={active.image}
+            alt={product.name_ar}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">لا توجد صورة</div>
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            لا توجد صورة
+          </div>
         )}
       </div>
+
+      {showVariantPicker && (
+        <div
+          className="px-2 pt-2 flex items-center gap-1.5 overflow-x-auto"
+          onClick={(e) => e.preventDefault()}
+        >
+          {gallery.slice(0, 6).map((item, idx) => {
+            const isActive = idx === activeIdx;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                title={item.color_name || 'صورة'}
+                aria-label={item.color_name || `صورة ${idx + 1}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveIdx(idx);
+                }}
+                className={`shrink-0 rounded-md overflow-hidden border-2 transition ${
+                  isActive
+                    ? 'border-primary-500 ring-1 ring-primary-500'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-primary-300'
+                }`}
+              >
+                <img
+                  src={item.image}
+                  alt=""
+                  className="w-9 h-9 object-cover bg-gray-50 dark:bg-gray-700"
+                />
+              </button>
+            );
+          })}
+          {gallery.length > 6 && (
+            <span className="text-xs text-gray-400 shrink-0">+{gallery.length - 6}</span>
+          )}
+        </div>
+      )}
+
       <div className="p-4">
         <h3 className="font-medium line-clamp-2 mb-2">{product.name_ar}</h3>
+
+        {showVariantPicker && (
+          <div
+            className="flex items-center gap-1.5 mb-2 flex-wrap"
+            onClick={(e) => e.preventDefault()}
+          >
+            {gallery.slice(0, 6).map((item, idx) => (
+              <button
+                key={`swatch-${item.id}`}
+                type="button"
+                title={item.color_name || undefined}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveIdx(idx);
+                }}
+                className={`w-4 h-4 rounded-full border ${
+                  idx === activeIdx
+                    ? 'ring-2 ring-primary-500 ring-offset-1'
+                    : 'border-gray-300 dark:border-gray-500'
+                }`}
+                style={{ backgroundColor: item.hex_code || '#e5e7eb' }}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <span className="text-primary-600 font-bold">{formatPrice(product.price)}</span>
           {hasDiscount && (
-            <span className="text-sm text-gray-400 line-through">{formatPrice(product.compare_price)}</span>
+            <span className="text-sm text-gray-400 line-through">
+              {formatPrice(product.compare_price)}
+            </span>
           )}
         </div>
         {product.total_stock <= 0 && (
