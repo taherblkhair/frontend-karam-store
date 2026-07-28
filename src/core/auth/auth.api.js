@@ -5,4 +5,5 @@ export const authApi = {
   login: (data) => api.post(endpoints.auth.login, data),
   register: (data) => api.post(endpoints.auth.register, data),
   me: () => api.get(endpoints.auth.me),
+  updateShippingAddress: (data) => api.put(endpoints.auth.shippingAddress, data),
 };

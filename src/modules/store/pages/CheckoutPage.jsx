@@ -9,17 +9,22 @@ import { useCart } from '@modules/store/context/CartContext';
 import { useAuth } from '@core/auth/AuthContext';
 import { FieldError, FormAlert } from '@shared/ui';
 import { formatPrice, getWhatsAppLink } from '@core/constants';
+import {
+  isValidLibyaMobile,
+  normalizeLibyaPhone,
+  LIBYA_PHONE_MESSAGE,
+} from '@shared/utils/phone';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
-  const { user, register } = useAuth();
+  const { user, register, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [createAccount, setCreateAccount] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
-  const { fieldErrors, formError, clearErrors, applyApiError, getFieldError } = useFormErrors();
+  const { formError, clearErrors, applyApiError, getFieldError } = useFormErrors();
   const [form, setForm] = useState({
-    customer_name: user?.name || '',
-    customer_phone: user?.phone || '',
+    customer_name: '',
+    customer_phone: '',
     city_id: '',
     area_id: '',
     address: '',
@@ -27,6 +32,7 @@ export default function CheckoutPage() {
     password: '',
   });
   const [shippingCost, setShippingCost] = useState(0);
+  const [addressPrefillDone, setAddressPrefillDone] = useState(false);
 
   const { data: citiesData } = useQuery({
     queryKey: ['cities'],
@@ -44,9 +50,44 @@ export default function CheckoutPage() {
     queryFn: () => storeApi.settings(),
   });
 
+  // Auto-fill from saved shipping address for logged-in customers
+  useEffect(() => {
+    let cancelled = false;
+
+    async function prefill() {
+      if (!user || user.role !== 'customer' || addressPrefillDone) return;
+
+      let profile = user;
+      try {
+        const fresh = await refreshProfile();
+        if (fresh) profile = fresh;
+      } catch {
+        // use local user
+      }
+      if (cancelled) return;
+
+      const ship = profile.shipping_address || {};
+      setForm((prev) => ({
+        ...prev,
+        customer_name: ship.name || profile.name || prev.customer_name,
+        customer_phone: ship.phone || profile.phone || prev.customer_phone,
+        city_id: ship.city_id ? String(ship.city_id) : prev.city_id,
+        area_id: ship.area_id ? String(ship.area_id) : prev.area_id,
+        address: ship.address || prev.address,
+      }));
+      setAddressPrefillDone(true);
+    }
+
+    prefill();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, refreshProfile, addressPrefillDone]);
+
   useEffect(() => {
     if (form.city_id) {
-      storeApi.shippingCost({ city_id: form.city_id, area_id: form.area_id || undefined })
+      storeApi
+        .shippingCost({ city_id: form.city_id, area_id: form.area_id || undefined })
         .then((res) => setShippingCost(res.data.shipping_cost))
         .catch(() => setShippingCost(15));
     }
@@ -58,6 +99,9 @@ export default function CheckoutPage() {
       clearCart();
       setOrderSuccess({ ...res.data, message: res.message });
       notifySuccess(res);
+      if (user?.role === 'customer') {
+        refreshProfile().catch(() => {});
+      }
     },
     onError: (err) => {
       applyApiError(err);
@@ -70,12 +114,17 @@ export default function CheckoutPage() {
     clearErrors();
     if (items.length === 0) return notifyError({ message: 'السلة فارغة' });
 
+    const customerPhone = normalizeLibyaPhone(form.customer_phone);
+    if (!isValidLibyaMobile(customerPhone)) {
+      return notifyError({ message: LIBYA_PHONE_MESSAGE });
+    }
+
     if (createAccount && !user) {
       try {
         const res = await register({
-          name: form.customer_name,
-          phone: form.customer_phone,
+          phone: customerPhone,
           password: form.password,
+          name: form.customer_name || undefined,
         });
         notifySuccess(res);
       } catch (err) {
@@ -91,7 +140,7 @@ export default function CheckoutPage() {
 
     orderMutation.mutate({
       customer_name: form.customer_name,
-      customer_phone: form.customer_phone,
+      customer_phone: customerPhone,
       city_id: parseInt(form.city_id, 10),
       area_id: form.area_id ? parseInt(form.area_id, 10) : null,
       address: form.address,
@@ -130,7 +179,9 @@ export default function CheckoutPage() {
             >
               التواصل مع المتجر عبر WhatsApp
             </a>
-            <button onClick={() => navigate('/')} className="btn-outline">العودة للرئيسية</button>
+            <button onClick={() => navigate('/')} className="btn-outline">
+              العودة للرئيسية
+            </button>
           </div>
         </div>
       </StoreLayout>
@@ -138,6 +189,7 @@ export default function CheckoutPage() {
   }
 
   const total = subtotal + shippingCost;
+  const hasSavedAddress = Boolean(user?.shipping_address?.address || user?.shipping_address?.city_id);
 
   return (
     <StoreLayout>
@@ -145,20 +197,51 @@ export default function CheckoutPage() {
         <h1 className="text-2xl font-bold mb-6">إتمام الطلب</h1>
 
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
-          {formError ? <div className="md:col-span-2"><FormAlert message={formError} /></div> : null}
+          {formError ? (
+            <div className="md:col-span-2">
+              <FormAlert message={formError} />
+            </div>
+          ) : null}
           <div className="space-y-4">
             <div className="card p-6">
-              <h2 className="font-bold mb-4">معلومات التوصيل</h2>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h2 className="font-bold">معلومات التوصيل</h2>
+                {hasSavedAddress && (
+                  <span className="text-xs text-green-700 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
+                    من عنوانك المحفوظ
+                  </span>
+                )}
+              </div>
               <div className="space-y-4">
                 <div>
-                  <input className="input" placeholder="الاسم الكامل" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
+                  <input
+                    className="input"
+                    placeholder="الاسم الكامل"
+                    required
+                    value={form.customer_name}
+                    onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                  />
                   <FieldError message={getFieldError('customer_name')} />
                 </div>
                 <div>
-                  <input className="input" placeholder="رقم الهاتف" required value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
+                  <input
+                    className="input"
+                    placeholder="مثال: 0912345678"
+                    pattern="09[1-5][0-9]{7}"
+                    title={LIBYA_PHONE_MESSAGE}
+                    required
+                    value={form.customer_phone}
+                    onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">091 · 092 · 093 · 094 · 095</p>
                   <FieldError message={getFieldError('customer_phone')} />
                 </div>
-                <select className="input" required value={form.city_id} onChange={(e) => setForm({ ...form, city_id: e.target.value, area_id: '' })}>
+                <select
+                  className="input"
+                  required
+                  value={form.city_id}
+                  onChange={(e) => setForm({ ...form, city_id: e.target.value, area_id: '' })}
+                >
                   <option value="">اختر المدينة</option>
                   {citiesData?.data?.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -177,24 +260,51 @@ export default function CheckoutPage() {
                   >
                     <option value="">اختر المنطقة</option>
                     {areasData?.data?.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name_ar}</option>
+                      <option key={a.id} value={a.id}>
+                        {a.name_ar}
+                      </option>
                     ))}
                   </select>
                 )}
-                <textarea className="input" placeholder="العنوان التفصيلي" required rows={3} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                <textarea className="input" placeholder="ملاحظات (اختياري)" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                <textarea
+                  className="input"
+                  placeholder="العنوان التفصيلي"
+                  required
+                  rows={3}
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                />
+                <textarea
+                  className="input"
+                  placeholder="ملاحظات (اختياري)"
+                  rows={2}
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
               </div>
             </div>
 
             {!user && (
               <div className="card p-6">
                 <label className="flex items-center gap-2 mb-4">
-                  <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} />
-                  <span>إنشاء حساب</span>
+                  <input
+                    type="checkbox"
+                    checked={createAccount}
+                    onChange={(e) => setCreateAccount(e.target.checked)}
+                  />
+                  <span>إنشاء حساب برقم الهاتف وكلمة المرور</span>
                 </label>
                 {createAccount && (
                   <div>
-                    <input type="password" className="input" placeholder="كلمة المرور (8 أحرف على الأقل)" required={createAccount} minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <input
+                      type="password"
+                      className="input"
+                      placeholder="كلمة المرور (8 أحرف على الأقل)"
+                      required={createAccount}
+                      minLength={8}
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    />
                     <FieldError message={getFieldError('password')} />
                   </div>
                 )}
@@ -209,15 +319,26 @@ export default function CheckoutPage() {
               <div className="space-y-2 mb-4 max-h-48 overflow-auto">
                 {items.map((item) => (
                   <div key={item.key} className="flex justify-between text-sm">
-                    <span>{item.name} × {item.quantity}</span>
+                    <span>
+                      {item.name} × {item.quantity}
+                    </span>
                     <span>{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
               <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between"><span>المجموع</span><span>{formatPrice(subtotal)}</span></div>
-                <div className="flex justify-between"><span>الشحن</span><span>{formatPrice(shippingCost)}</span></div>
-                <div className="flex justify-between font-bold text-lg"><span>الإجمالي</span><span className="text-primary-600">{formatPrice(total)}</span></div>
+                <div className="flex justify-between">
+                  <span>المجموع</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>الشحن</span>
+                  <span>{formatPrice(shippingCost)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg">
+                  <span>الإجمالي</span>
+                  <span className="text-primary-600">{formatPrice(total)}</span>
+                </div>
               </div>
               <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm">
                 💵 الدفع عند الاستلام (COD)

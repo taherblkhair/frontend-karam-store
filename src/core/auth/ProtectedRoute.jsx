@@ -19,7 +19,7 @@ export function GuestRoute() {
   const { user } = useAuth();
 
   if (user) {
-    return <Navigate to={user.role === 'customer' ? '/' : '/admin'} replace />;
+    return <Navigate to={user.role === 'customer' ? '/account' : '/admin'} replace />;
   }
 
   return <Outlet />;

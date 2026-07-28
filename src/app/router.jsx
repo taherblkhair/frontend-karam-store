@@ -9,6 +9,8 @@ import CartPage from '@modules/store/pages/CartPage';
 import CheckoutPage from '@modules/store/pages/CheckoutPage';
 
 import LoginPage from '@modules/auth/pages/LoginPage';
+import RegisterPage from '@modules/auth/pages/RegisterPage';
+import AccountPage from '@modules/auth/pages/AccountPage';
 
 import DashboardPage from '@modules/dashboard/pages/DashboardPage';
 import ProductListPage from '@modules/products/pages/ProductListPage';
@@ -39,6 +41,11 @@ export function AppRouter() {
         {/* Auth */}
         <Route element={<GuestRoute />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute roles={['customer']} />}>
+          <Route path="/account" element={<AccountPage />} />
         </Route>
 
         {/* Admin / POS */}
