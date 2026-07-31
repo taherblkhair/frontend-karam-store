@@ -1,0 +1,39 @@
+name: Production Environment CI CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  production-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter (ESLint)
+        run: npm run lint --if-present
+
+      - name: Build Project for Production
+        run: npm run build
+
+      - name: Deploy to cPanel Production
+        uses: SamKirsch/ftp-deploy-action@v4.3.5
+        with:
+          server: ${{ secrets.PROD_FTP_SERVER }}
+          username: ${{ secrets.PROD_FTP_USERNAME }}
+          password: ${{ secrets.PROD_FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /
+          state-name: .ftp-deploy-sync-state.json
