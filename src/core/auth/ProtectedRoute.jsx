@@ -1,0 +1,26 @@
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '@core/auth/AuthContext';
+
+export function ProtectedRoute({ roles }) {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}
+
+export function GuestRoute() {
+  const { user } = useAuth();
+
+  if (user) {
+    return <Navigate to={user.role === 'customer' ? '/account' : '/admin'} replace />;
+  }
+
+  return <Outlet />;
+}
