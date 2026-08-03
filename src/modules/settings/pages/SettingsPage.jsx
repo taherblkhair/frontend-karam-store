@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@core/api/config.js';
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -179,7 +180,7 @@ export default function SettingsPage() {
       <div className="card p-4 mb-6 flex items-center gap-4">
         <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center shrink-0 border border-gray-200 dark:border-gray-600">
           {form.logo ? (
-            <img src={form.logo} alt="" className="w-full h-full object-cover" />
+            <img src={resolveMediaUrl(form.logo)} alt="" className="w-full h-full object-cover" />
           ) : (
             <Store size={22} className="text-gray-400" />
           )}

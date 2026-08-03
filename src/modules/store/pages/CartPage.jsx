@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@core/api/config.js';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import StoreLayout from '@shared/layouts/StoreLayout';
@@ -22,7 +23,7 @@ export default function CartPage() {
                 <div key={item.key} className="card p-4 flex gap-4">
                   <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
                     {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">لا صورة</div>
                     )}

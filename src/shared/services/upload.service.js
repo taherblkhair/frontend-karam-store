@@ -1,6 +1,7 @@
 import { createApiError, NETWORK_ERROR_MESSAGE } from '@shared/utils/apiMessage.js';
+import { API_BASE_URL } from '@core/api/config.js';
 
-export async function uploadFile(file, field = 'products') {
+export async function uploadFile(file) {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -8,7 +9,7 @@ export async function uploadFile(file, field = 'products') {
 
   let response;
   try {
-    response = await fetch('/api/upload', {
+    response = await fetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -39,10 +40,10 @@ export async function uploadFile(file, field = 'products') {
   return data;
 }
 
-export async function uploadFiles(files, field = 'products') {
+export async function uploadFiles(files) {
   const results = [];
   for (const file of files) {
-    const result = await uploadFile(file, field);
+    const result = await uploadFile(file);
     results.push(result.data);
   }
   return results;

@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@core/api/config.js';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -91,7 +92,7 @@ export default function BannersPage() {
             {banners.map((b) => (
               <div key={b.id} className="card overflow-hidden">
                 {b.image ? (
-                  <img src={b.image} alt="" className="w-full h-40 object-cover" />
+                  <img src={resolveMediaUrl(b.image)} alt="" className="w-full h-40 object-cover" />
                 ) : (
                   <div className="h-40 bg-gray-200" />
                 )}

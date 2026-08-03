@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@core/api/config.js';
 import { Link } from 'react-router-dom';
 import { Package } from 'lucide-react';
 
@@ -17,7 +18,7 @@ export function CategoryCard({ category, active = false, to }) {
       <div className="aspect-square bg-gray-50 dark:bg-gray-700 overflow-hidden">
         {category.image ? (
           <img
-            src={category.image}
+            src={resolveMediaUrl(category.image)}
             alt={category.name_ar}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"

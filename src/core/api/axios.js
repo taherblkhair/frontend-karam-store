@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { createApiError, NETWORK_ERROR_MESSAGE } from '@shared/utils/apiMessage.js';
+import { API_BASE_URL } from './config.js';
 
 const SESSION_CODES = new Set(['AUTH_REQUIRED', 'INVALID_TOKEN', 'TOKEN_EXPIRED']);
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

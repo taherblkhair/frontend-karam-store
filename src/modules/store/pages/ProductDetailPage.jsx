@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@core/api/config.js';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -75,7 +76,7 @@ export default function ProductDetailPage() {
           <div>
             <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden mb-4">
               {displayImage ? (
-                <img src={displayImage} alt={product.name_ar} className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(displayImage)} alt={product.name_ar} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">لا توجد صورة</div>
               )}
@@ -84,7 +85,7 @@ export default function ProductDetailPage() {
               <div className="flex gap-2 overflow-x-auto">
                 {product.images.map((img, i) => (
                   <button key={i} onClick={() => setSelectedImage(i)} className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === i ? 'border-primary-600' : 'border-transparent'}`}>
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(img.url)} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
