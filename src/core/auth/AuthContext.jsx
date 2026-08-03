@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '@core/auth/auth.api';
+import { createApiError } from '@shared/utils/apiMessage.js';
 
 const AuthContext = createContext(null);
 
@@ -15,11 +16,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   const applyAuth = (payload) => {
-    if (payload?.token) localStorage.setItem('token', payload.token);
-    if (payload?.user) {
-      persistUser(payload.user);
-      setUser(payload.user);
+    if (!payload?.token || !payload?.user) {
+      throw createApiError({
+        message: 'استجابة تسجيل الدخول غير مكتملة من الخادم',
+        code: 'INVALID_AUTH_PAYLOAD',
+        statusCode: 502,
+      });
     }
+    localStorage.setItem('token', payload.token);
+    persistUser(payload.user);
+    setUser(payload.user);
   };
 
   const refreshProfile = useCallback(async () => {

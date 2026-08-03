@@ -18,17 +18,48 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    const data = response.data;
+
+    // Production misconfig (Passenger default page, HTML, plain text, etc.)
+    if (typeof data === 'string' || data == null || typeof data !== 'object') {
+      return Promise.reject(
+        createApiError({
+          message:
+            'الخادم لا يُرجع استجابة API صحيحة. تأكد من تشغيل تطبيق Express (وليس صفحة Passenger الافتراضية).',
+          code: 'INVALID_API_RESPONSE',
+          statusCode: response.status || 502,
+        })
+      );
+    }
+
+    // Expected envelope: { success, message, data }
+    if (typeof data.success !== 'boolean') {
+      return Promise.reject(
+        createApiError({
+          message:
+            'صيغة استجابة الـ API غير متوقعة. تحقق من أن api.karamstore.ly يشغّل مشروع الـ Backend.',
+          code: 'INVALID_API_RESPONSE',
+          statusCode: response.status || 502,
+        })
+      );
+    }
+
+    return data;
+  },
   (error) => {
     const payload = error.response?.data;
-    const statusCode = payload?.statusCode ?? error.response?.status ?? null;
-    const code = payload?.code ?? null;
+    const statusCode =
+      (typeof payload === 'object' && payload?.statusCode) ||
+      error.response?.status ||
+      null;
+    const code = (typeof payload === 'object' && payload?.code) || null;
     const url = error.config?.url || '';
-
+    const looksLikeDefaultHostPage =
+      typeof payload === 'string' && /it works|NodeJS/i.test(payload);
     const isAuthAttempt =
       url.includes('/auth/login') || url.includes('/auth/register');
 
-    // Clear session only for expired/invalid tokens — not wrong login credentials
     const shouldClearSession =
       statusCode === 401 &&
       !isAuthAttempt &&
@@ -47,6 +78,17 @@ api.interceptors.response.use(
         createApiError({
           message: NETWORK_ERROR_MESSAGE,
           code: 'NETWORK_ERROR',
+        })
+      );
+    }
+
+    if (looksLikeDefaultHostPage || typeof payload === 'string') {
+      return Promise.reject(
+        createApiError({
+          message:
+            'الخادم لا يشغّل الـ API (تم استلام صفحة افتراضية بدل JSON). راجع إعدادات الاستضافة / Passenger.',
+          code: 'INVALID_API_RESPONSE',
+          statusCode: statusCode || 502,
         })
       );
     }
