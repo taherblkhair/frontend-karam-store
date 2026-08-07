@@ -77,7 +77,7 @@ export default function AdminProductsPage() {
         <h1 className="text-2xl font-bold">المنتجات</h1>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <SearchInput value={search} onChange={setSearch} placeholder="بحث بالاسم أو SKU..." />
-          <button
+          {/* <button
             onClick={async () => {
               const ok = await confirm({
                 title: 'منتجات تجريبية',
@@ -108,7 +108,7 @@ export default function AdminProductsPage() {
           >
             <Sparkles size={16} />
             {handbagsMutation.isPending ? 'جاري الإضافة…' : 'حقائب نسائية (100)'}
-          </button>
+          </button> */}
           <button onClick={openCreate} className="btn-primary">
             <Plus size={18} /> إضافة
           </button>

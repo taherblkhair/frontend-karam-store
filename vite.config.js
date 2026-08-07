@@ -7,7 +7,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiPort = env.VITE_API_PORT || '3000';
+  const directApi = (env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+  const proxyTarget = (
+    env.VITE_API_PROXY_TARGET ||
+    (env.VITE_API_PORT ? `http://localhost:${env.VITE_API_PORT}` : '') ||
+    'https://api.karamstore.ly'
+  ).replace(/\/+$/, '');
+
+  // Empty VITE_API_BASE_URL = browser → /api → Vite proxy → proxyTarget
+  // Set VITE_API_BASE_URL for production builds / direct browser→API
+  const useProxy = !directApi;
 
   return {
     plugins: [react()],
@@ -22,16 +31,20 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      proxy: {
-        '/api': {
-          target: `http://localhost:${apiPort}`,
-          changeOrigin: true,
-        },
-        '/uploads': {
-          target: `http://localhost:${apiPort}`,
-          changeOrigin: true,
-        },
-      },
+      proxy: useProxy
+        ? {
+            '/api': {
+              target: proxyTarget,
+              changeOrigin: true,
+              secure: true,
+            },
+            '/uploads': {
+              target: proxyTarget,
+              changeOrigin: true,
+              secure: true,
+            },
+          }
+        : undefined,
     },
   };
 });
