@@ -37,10 +37,10 @@ export default function StoreLayout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b dark:bg-gray-900/95 dark:border-gray-700">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-ink-100 dark:bg-gray-900/95 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
-            <Link to="/" className="text-xl md:text-2xl font-bold text-primary-600">
+            <Link to="/" className="text-xl md:text-2xl font-display font-bold text-primary-600">
               متجر كرم
             </Link>
 
@@ -106,10 +106,10 @@ export default function StoreLayout({ children }) {
 
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-      <footer className="hidden md:block bg-gray-900 text-gray-300 py-12 mt-auto">
+      <footer className="hidden md:block bg-ink-800 text-gray-300 py-12 mt-auto">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-white text-lg font-bold mb-4">متجر كرم</h3>
+            <h3 className="text-white text-lg font-display font-bold mb-4">متجر كرم</h3>
             <p className="text-sm">متجر إلكتروني ليبي - الدفع عند الاستلام</p>
           </div>
           <div>
@@ -129,14 +129,14 @@ export default function StoreLayout({ children }) {
             <p className="text-sm">info@karamstore.ly</p>
           </div>
         </div>
-        <div className="container mx-auto px-4 mt-8 pt-8 border-t border-gray-800 text-center text-sm">
+        <div className="container mx-auto px-4 mt-8 pt-8 border-t border-ink-700 text-center text-sm">
           © 2026 متجر كرم - جميع الحقوق محفوظة
         </div>
       </footer>
 
       {/* Mobile bottom navigation */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-ink-100 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
         aria-label="التنقل الرئيسي"
       >
         <div className="flex items-stretch h-16">

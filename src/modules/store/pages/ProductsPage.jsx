@@ -1,13 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, X } from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
 import { CategoryCard } from '@modules/store/components/CategoryCard';
 
 const FILTERS_STORAGE_KEY = 'store-filters-open';
+
+/** UI sort → API sortBy / sortOrder */
+const SORT_PRESETS = {
+  newest: { sortBy: 'created_at', sortOrder: 'DESC' },
+  oldest: { sortBy: 'created_at', sortOrder: 'ASC' },
+  price_asc: { sortBy: 'price', sortOrder: 'ASC' },
+  price_desc: { sortBy: 'price', sortOrder: 'DESC' },
+  name: { sortBy: 'name_ar', sortOrder: 'ASC' },
+};
+
+const SORT_LABELS = [
+  { value: 'newest', label: 'الأحدث' },
+  { value: 'oldest', label: 'الأقدم' },
+  { value: 'price_asc', label: 'السعر: من الأقل للأعلى' },
+  { value: 'price_desc', label: 'السعر: من الأعلى للأقل' },
+  { value: 'name', label: 'الاسم' },
+];
 
 function FilterFields({
   filters,
@@ -19,18 +36,33 @@ function FilterFields({
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="font-bold mb-2 text-sm text-gray-600 dark:text-gray-300">بحث</h3>
-        <input
-          type="text"
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">ترتيب</h3>
+        <select
           className="input"
-          placeholder="ابحث..."
+          value={filters.sort}
+          onChange={(e) => updateFilter('sort', e.target.value)}
+        >
+          {SORT_LABELS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">بحث</h3>
+        <input
+          type="search"
+          className="input"
+          placeholder="ابحث عن منتج..."
           value={filters.search}
           onChange={(e) => updateFilter('search', e.target.value)}
         />
       </div>
 
       <div>
-        <h3 className="font-bold mb-2 text-sm text-gray-600 dark:text-gray-300">الفئة</h3>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">الفئة</h3>
         <select
           className="input"
           value={filters.category}
@@ -46,12 +78,13 @@ function FilterFields({
       </div>
 
       <div>
-        <h3 className="font-bold mb-2 text-sm text-gray-600 dark:text-gray-300">السعر</h3>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">السعر (د.ل)</h3>
         <div className="flex gap-2">
           <input
             type="number"
             className="input"
             placeholder="من"
+            min={0}
             value={filters.min_price}
             onChange={(e) => updateFilter('min_price', e.target.value)}
           />
@@ -59,6 +92,7 @@ function FilterFields({
             type="number"
             className="input"
             placeholder="إلى"
+            min={0}
             value={filters.max_price}
             onChange={(e) => updateFilter('max_price', e.target.value)}
           />
@@ -66,7 +100,7 @@ function FilterFields({
       </div>
 
       <div>
-        <h3 className="font-bold mb-2 text-sm text-gray-600 dark:text-gray-300">اللون</h3>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">اللون</h3>
         <select
           className="input"
           value={filters.color}
@@ -82,7 +116,7 @@ function FilterFields({
       </div>
 
       <div>
-        <h3 className="font-bold mb-2 text-sm text-gray-600 dark:text-gray-300">المقاس</h3>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">المقاس</h3>
         <select
           className="input"
           value={filters.size}
@@ -107,7 +141,6 @@ export default function ProductsPage() {
     const saved = localStorage.getItem(FILTERS_STORAGE_KEY);
     if (saved === '0') return false;
     if (saved === '1') return true;
-    // Mobile: closed by default; desktop sidebar open
     return window.innerWidth >= 1024;
   });
 
@@ -115,7 +148,6 @@ export default function ProductsPage() {
     localStorage.setItem(FILTERS_STORAGE_KEY, filtersOpen ? '1' : '0');
   }, [filtersOpen]);
 
-  // Lock body scroll when mobile drawer is open
   useEffect(() => {
     if (!filtersOpen || window.innerWidth >= 1024) return undefined;
     const prev = document.body.style.overflow;
@@ -125,6 +157,9 @@ export default function ProductsPage() {
     };
   }, [filtersOpen]);
 
+  const sortKey = params.get('sort') || 'newest';
+  const sortPreset = SORT_PRESETS[sortKey] || SORT_PRESETS.newest;
+
   const filters = {
     search: params.get('search') || '',
     category: params.get('category') || '',
@@ -133,7 +168,10 @@ export default function ProductsPage() {
     color: params.get('color') || '',
     size: params.get('size') || '',
     is_new: params.get('is_new') || '',
+    sort: SORT_PRESETS[sortKey] ? sortKey : 'newest',
     page: params.get('page') || '1',
+    sortBy: sortPreset.sortBy,
+    sortOrder: sortPreset.sortOrder,
   };
 
   const activeFilterCount = [
@@ -144,11 +182,28 @@ export default function ProductsPage() {
     filters.color,
     filters.size,
     filters.is_new,
+    filters.sort !== 'newest' ? filters.sort : '',
   ].filter(Boolean).length;
 
+  const queryParams = useMemo(
+    () => ({
+      search: filters.search || undefined,
+      category: filters.category || undefined,
+      min_price: filters.min_price || undefined,
+      max_price: filters.max_price || undefined,
+      color: filters.color || undefined,
+      size: filters.size || undefined,
+      is_new: filters.is_new || undefined,
+      page: filters.page,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+    }),
+    [filters]
+  );
+
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', filters],
-    queryFn: () => storeApi.products(filters),
+    queryKey: ['products', queryParams],
+    queryFn: () => storeApi.products(queryParams),
   });
 
   const { data: categoriesData } = useQuery({
@@ -168,9 +223,15 @@ export default function ProductsPage() {
 
   const updateFilter = (key, value) => {
     const newParams = new URLSearchParams(params);
-    if (value) newParams.set(key, value);
-    else newParams.delete(key);
-    newParams.set('page', '1');
+    if (key === 'sort') {
+      if (!value || value === 'newest') newParams.delete('sort');
+      else newParams.set('sort', value);
+    } else if (value) {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    if (key !== 'page') newParams.set('page', '1');
     setParams(newParams);
   };
 
@@ -179,7 +240,7 @@ export default function ProductsPage() {
   };
 
   const closeFilters = () => setFiltersOpen(false);
-  const openFilters = () => setFiltersOpen(true);
+  const toggleFilters = () => setFiltersOpen((v) => !v);
 
   const products = productsData?.data || [];
   const pagination = productsData?.pagination;
@@ -197,35 +258,46 @@ export default function ProductsPage() {
     <StoreLayout>
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-bold">المنتجات</h1>
+          <div>
+            <h1 className="text-2xl sm:text-3xl text-primary-600">المنتجات</h1>
+            {pagination?.total != null && (
+              <p className="text-sm text-ink-400 mt-1">{pagination.total} منتج</p>
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
             {activeFilterCount > 0 && (
-              <button type="button" onClick={clearFilters} className="btn-outline text-sm">
+              <button type="button" onClick={clearFilters} className="btn-outline text-sm rounded-full">
                 مسح ({activeFilterCount})
               </button>
             )}
-            {/* Compact opener only when filters are closed */}
-            {!filtersOpen && (
-              <button
-                type="button"
-                onClick={openFilters}
-                className="btn-secondary text-sm inline-flex items-center gap-2"
-              >
-                <Filter size={16} />
-                الفلاتر
-                {activeFilterCount > 0 && (
-                  <span className="bg-primary-600 text-white text-xs min-w-[1.25rem] h-5 px-1 rounded-full inline-flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={toggleFilters}
+              className={filtersOpen ? 'btn-outline text-sm rounded-full' : 'btn-filter'}
+              aria-expanded={filtersOpen}
+              aria-controls="store-filters-panel"
+            >
+              <SlidersHorizontal size={18} strokeWidth={2.25} />
+              تصفية وترتيب
+              {activeFilterCount > 0 && (
+                <span
+                  className={`text-xs min-w-[1.25rem] h-5 px-1.5 rounded-full inline-flex items-center justify-center font-semibold ${
+                    filtersOpen
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-secondary-400 text-ink-800'
+                  }`}
+                >
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
         {categories.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold mb-3">التصنيفات</h2>
+            <h2 className="text-lg mb-3">التصنيفات</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {categories.map((cat) => (
                 <CategoryCard
@@ -239,19 +311,21 @@ export default function ProductsPage() {
         )}
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Desktop: inline sidebar with close inside panel */}
           {filtersOpen && (
-            <aside className="hidden lg:block lg:w-72 shrink-0">
-              <div className="card sticky top-20 overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-                  <div className="flex items-center gap-2 font-bold">
-                    <Filter size={18} className="text-primary-600" />
-                    الفلاتر
+            <aside
+              id="store-filters-panel"
+              className="hidden lg:block lg:w-72 shrink-0"
+            >
+              <div className="card sticky top-20 overflow-hidden border-primary-600/10">
+                <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-ink-100 bg-primary-600 text-white">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <SlidersHorizontal size={18} />
+                    تصفية وترتيب
                   </div>
                   <button
                     type="button"
                     onClick={closeFilters}
-                    className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    className="inline-flex items-center gap-1.5 text-sm text-white/90 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/10 transition"
                     aria-label="إغلاق الفلتر"
                   >
                     <X size={16} />
@@ -274,25 +348,24 @@ export default function ProductsPage() {
             </aside>
           )}
 
-          {/* Mobile / tablet: drawer with close inside */}
           {filtersOpen && (
             <div className="lg:hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true">
               <button
                 type="button"
-                className="absolute inset-0 bg-black/45"
+                className="absolute inset-0 bg-ink-800/50 backdrop-blur-[2px]"
                 aria-label="إغلاق الفلتر"
                 onClick={closeFilters}
               />
-              <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-gray-900 shadow-xl flex flex-col animate-in">
-                <div className="flex items-center justify-between gap-2 px-4 py-3 border-b dark:border-gray-700">
-                  <div className="flex items-center gap-2 font-bold text-lg">
-                    <Filter size={20} className="text-primary-600" />
-                    الفلاتر
+              <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-gray-900 shadow-2xl flex flex-col translate-x-0 transition-transform duration-300">
+                <div className="flex items-center justify-between gap-2 px-4 py-3 bg-primary-600 text-white">
+                  <div className="flex items-center gap-2 font-semibold text-lg">
+                    <SlidersHorizontal size={20} />
+                    تصفية وترتيب
                   </div>
                   <button
                     type="button"
                     onClick={closeFilters}
-                    className="inline-flex items-center gap-1.5 btn-outline text-sm py-2"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10 transition"
                     aria-label="إغلاق الفلتر"
                   >
                     <X size={18} />
@@ -302,13 +375,13 @@ export default function ProductsPage() {
                 <div className="flex-1 overflow-y-auto p-4">
                   <FilterFields {...filterProps} />
                 </div>
-                <div className="p-4 border-t dark:border-gray-700 flex gap-2">
+                <div className="p-4 border-t border-ink-100 dark:border-gray-700 flex gap-2 safe-pb">
                   {activeFilterCount > 0 && (
-                    <button type="button" onClick={clearFilters} className="btn-outline flex-1">
+                    <button type="button" onClick={clearFilters} className="btn-outline flex-1 rounded-full">
                       مسح
                     </button>
                   )}
-                  <button type="button" onClick={closeFilters} className="btn-primary flex-1">
+                  <button type="button" onClick={closeFilters} className="btn-primary flex-1 rounded-full">
                     عرض النتائج
                   </button>
                 </div>
@@ -316,11 +389,11 @@ export default function ProductsPage() {
             </div>
           )}
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {isLoading ? (
               <LoadingSpinner />
             ) : products.length === 0 ? (
-              <EmptyState message="لا توجد منتجات" />
+              <EmptyState message="لا توجد منتجات مطابقة للفلتر" />
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -329,15 +402,16 @@ export default function ProductsPage() {
                   ))}
                 </div>
                 {pagination && pagination.pages > 1 && (
-                  <div className="flex justify-center gap-2 mt-8">
+                  <div className="flex flex-wrap justify-center gap-2 mt-8">
                     {Array.from({ length: pagination.pages }, (_, i) => (
                       <button
                         key={i}
+                        type="button"
                         onClick={() => updateFilter('page', String(i + 1))}
-                        className={`px-4 py-2 rounded-lg ${
+                        className={`min-w-[2.5rem] px-3 py-2 rounded-full text-sm font-medium transition ${
                           pagination.page === i + 1
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                            ? 'bg-primary-600 text-white shadow-sm'
+                            : 'bg-white border border-ink-100 text-ink-800 hover:border-primary-600/40'
                         }`}
                       >
                         {i + 1}
