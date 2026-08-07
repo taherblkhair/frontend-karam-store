@@ -266,7 +266,9 @@ export default function OrdersPage() {
                       </>
                     ) : (
                       <p className="text-amber-700 dark:text-amber-300">
-                        لم تُنشأ شحنة في درب السبيل بعد
+                        {order.status === 'new' || order.status === 'pending_confirmation'
+                          ? 'تُنشأ الشحنة تلقائياً عند تأكيد الطلب.'
+                          : 'لم تُنشأ شحنة في درب السبيل بعد'}
                         {order.sabil_error ? ' (فشلت المحاولة السابقة)' : ''}.
                       </p>
                     )}
