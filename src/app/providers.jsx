@@ -4,6 +4,7 @@ import { AuthProvider } from '@core/auth/AuthContext';
 import { ThemeProvider } from '@core/config/ThemeContext';
 import { CartProvider } from '@modules/store/context/CartContext';
 import { ConfirmProvider } from '@shared/hooks/useConfirm';
+import { StoreBranding } from '@shared/components/StoreBranding';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,7 @@ export function AppProviders({ children }) {
         <AuthProvider>
           <CartProvider>
             <ConfirmProvider>
+              <StoreBranding />
               {children}
               <Toaster position="top-center" />
             </ConfirmProvider>
