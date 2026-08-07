@@ -9,6 +9,7 @@ import { inventoryApi } from '@modules/inventory/api/inventory.api';
 import { productsApi } from '@modules/products/api/products.api';
 import { LoadingSpinner, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const MOVEMENT_LABELS = {
   in: 'إضافة',
@@ -212,7 +213,7 @@ export default function InventoryPage() {
             <EmptyState message="لا توجد أصناف في المخزون" />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="admin-table">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="text-right p-4">المنتج</th>
@@ -401,7 +402,7 @@ export default function InventoryPage() {
               <EmptyState message="لا توجد حركات" />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="admin-table">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th className="text-right p-4">المنتج</th>

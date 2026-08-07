@@ -8,6 +8,7 @@ import { SearchInput, Pagination } from '@shared/components/ListControls';
 import { formatPrice, ORDER_STATUS, getWhatsAppLink } from '@core/constants';
 import { printOrderInvoice } from '@shared/services/invoice.service';
 import { useAuth } from '@core/auth/AuthContext';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const STATUS_OPTIONS = {
   admin: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
@@ -96,12 +97,12 @@ export default function OrdersPage() {
   const canShip = hasPermission('shipping.create') || canManage;
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">الطلبات</h1>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+    <div className="min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">الطلبات</h1>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
           <SearchInput value={search} onChange={setSearch} placeholder="بحث برقم الطلب أو الهاتف..." />
-          <select className="input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select className="input w-full sm:w-auto sm:min-w-[10rem]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">جميع الحالات</option>
             {allowedStatuses.map((s) => (
               <option key={s} value={s}>{ORDER_STATUS[s]?.label || s}</option>
@@ -111,8 +112,8 @@ export default function OrdersPage() {
       </div>
 
       {isLoading ? <LoadingSpinner /> : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <TableScroll>
+            <table className="admin-table">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="text-right p-4">رقم الطلب</th>
@@ -142,7 +143,7 @@ export default function OrdersPage() {
               ))}
             </tbody>
           </table>
-        </div>
+          </TableScroll>
       )}
 
       <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
@@ -207,28 +208,30 @@ export default function OrdersPage() {
 
             <div>
               <h3 className="font-bold mb-3">المنتجات</h3>
-              <table className="w-full text-sm border dark:border-gray-700 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="text-right p-3">المنتج</th>
-                    <th className="text-right p-3">SKU</th>
-                    <th className="text-right p-3">الكمية</th>
-                    <th className="text-right p-3">السعر</th>
-                    <th className="text-right p-3">الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items?.map((item) => (
-                    <tr key={item.id} className="border-t dark:border-gray-700">
-                      <td className="p-3">{item.product_name}{item.variant_info ? ` (${item.variant_info})` : ''}</td>
-                      <td className="p-3">{item.sku || '-'}</td>
-                      <td className="p-3">{item.quantity}</td>
-                      <td className="p-3">{formatPrice(item.unit_price)}</td>
-                      <td className="p-3">{formatPrice(item.total)}</td>
+              <div className="overflow-x-auto -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <table className="admin-table border dark:border-gray-700 rounded-lg">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="text-right p-3">المنتج</th>
+                      <th className="text-right p-3">SKU</th>
+                      <th className="text-right p-3">الكمية</th>
+                      <th className="text-right p-3">السعر</th>
+                      <th className="text-right p-3">الإجمالي</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {order.items?.map((item) => (
+                      <tr key={item.id} className="border-t dark:border-gray-700">
+                        <td className="p-3">{item.product_name}{item.variant_info ? ` (${item.variant_info})` : ''}</td>
+                        <td className="p-3">{item.sku || '-'}</td>
+                        <td className="p-3">{item.quantity}</td>
+                        <td className="p-3">{formatPrice(item.unit_price)}</td>
+                        <td className="p-3">{formatPrice(item.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {canShip && (

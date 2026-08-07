@@ -10,6 +10,7 @@ import { PurchaseLineItem } from '@modules/purchases/components/PurchaseLineItem
 import { LoadingSpinner, Modal, FieldError, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
 import { formatPrice } from '@core/constants';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const emptyItem = () => ({
   product_id: '',
@@ -318,8 +319,8 @@ export default function PurchasesPage() {
         <EmptyState message="لا توجد فواتير شراء" />
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <TableScroll>
+            <table className="admin-table">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="text-right p-4">رقم الفاتورة</th>
@@ -349,7 +350,7 @@ export default function PurchasesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
           <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
         </>
       )}
@@ -485,7 +486,7 @@ export default function PurchasesPage() {
             ) : null}
 
             <div className="overflow-x-auto border rounded-xl dark:border-gray-700">
-              <table className="w-full text-sm">
+              <table className="admin-table">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="text-right p-3">الصنف</th>

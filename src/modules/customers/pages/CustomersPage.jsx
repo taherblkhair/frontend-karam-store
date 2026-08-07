@@ -7,6 +7,7 @@ import { LoadingSpinner, Modal, OrderStatusBadge, EmptyState } from '@shared/ui'
 import { SearchInput, Pagination } from '@shared/components/ListControls';
 import { formatPrice } from '@core/constants';
 import { notifyError } from '@shared/services/toast.service';
+import { TableScroll } from '@shared/components/TableScroll';
 
 export default function CustomersPage() {
   const [selected, setSelected] = useState(null);
@@ -41,8 +42,8 @@ export default function CustomersPage() {
         <EmptyState message="لا يوجد عملاء" />
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <TableScroll>
+            <table className="admin-table">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="text-right p-4">الاسم</th>
@@ -68,7 +69,7 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
           <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
         </>
       )}

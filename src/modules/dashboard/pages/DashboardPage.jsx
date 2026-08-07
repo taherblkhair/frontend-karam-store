@@ -3,6 +3,7 @@ import { DollarSign, ShoppingBag, Package, Users, AlertTriangle, TrendingUp } fr
 import { dashboardApi } from '@modules/dashboard/api/dashboard.api';
 import { StatCard, LoadingSpinner, OrderStatusBadge } from '@shared/ui';
 import { formatPrice } from '@core/constants';
+import { TableScroll } from '@shared/components/TableScroll';
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -15,18 +16,18 @@ export default function DashboardPage() {
   const stats = data?.data;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">لوحة التحكم</h1>
+    <div className="min-w-0">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">لوحة التحكم</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard title="مبيعات اليوم" value={formatPrice(stats?.salesToday?.total)} icon={DollarSign} color="green" />
         <StatCard title="طلبات اليوم" value={stats?.salesToday?.count || 0} icon={ShoppingBag} color="blue" />
         <StatCard title="مبيعات الشهر" value={formatPrice(stats?.salesMonth?.total)} icon={TrendingUp} color="primary" />
         <StatCard title="المنتجات" value={stats?.productCount || 0} icon={Package} color="orange" />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="card p-4 sm:p-6">
           <h2 className="font-bold mb-4">الطلبات حسب الحالة</h2>
           <div className="space-y-3">
             {stats?.orderStats?.map((s) => (
@@ -38,7 +39,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h2 className="font-bold mb-4 flex items-center gap-2">
             <AlertTriangle size={20} className="text-orange-500" />
             تنبيهات
@@ -55,10 +56,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card p-6 lg:col-span-2">
+        <div className="card p-4 sm:p-6 lg:col-span-2 min-w-0">
           <h2 className="font-bold mb-4">الأكثر مبيعاً</h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="admin-table">
               <thead>
                 <tr className="border-b dark:border-gray-700">
                   <th className="text-right py-3">المنتج</th>
@@ -79,10 +80,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card p-6 lg:col-span-2">
+        <div className="card p-4 sm:p-6 lg:col-span-2 min-w-0">
           <h2 className="font-bold mb-4">آخر الطلبات</h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="admin-table">
               <thead>
                 <tr className="border-b dark:border-gray-700">
                   <th className="text-right py-3">رقم الطلب</th>

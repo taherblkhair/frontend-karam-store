@@ -3,8 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans antialiased;
+  }
+  /* Avoid iOS input zoom (font-size < 16px) */
+  @media (max-width: 640px) {
+    input.input,
+    select.input,
+    textarea.input {
+      font-size: 16px;
+    }
   }
 }
 
@@ -32,5 +43,38 @@
   }
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Admin tables: min width + swipe on small screens */
+  .admin-table {
+    @apply w-full text-sm border-collapse min-w-[640px];
+  }
+  .admin-table thead {
+    @apply bg-gray-50 dark:bg-gray-700/80;
+  }
+  .admin-table th {
+    @apply text-right px-3 py-3 sm:px-4 font-semibold text-gray-600 dark:text-gray-200 whitespace-nowrap;
+  }
+  .admin-table td {
+    @apply text-right px-3 py-3 sm:px-4 border-t dark:border-gray-700 align-middle;
+  }
+  .admin-table tbody tr:hover {
+    @apply bg-gray-50/80 dark:bg-gray-700/30;
+  }
+  .admin-table.sticky-cols th:first-child,
+  .admin-table.sticky-cols td:first-child {
+    @apply sticky end-0 z-10 bg-white dark:bg-gray-800;
+  }
+  .admin-table.sticky-cols thead th:first-child {
+    @apply bg-gray-50 dark:bg-gray-700;
+  }
+}
+
+@layer utilities {
+  .safe-pb {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .safe-pt {
+    padding-top: max(0px, env(safe-area-inset-top));
   }
 }

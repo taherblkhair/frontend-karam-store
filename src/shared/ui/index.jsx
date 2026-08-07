@@ -151,14 +151,14 @@ export function StatCard({ title, value, icon: Icon, color = 'primary' }) {
   };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
+    <div className="card p-4 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-gray-500 mb-1 truncate">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold truncate">{value}</p>
         </div>
-        <div className={`p-3 rounded-xl ${colors[color]}`}>
-          <Icon size={24} />
+        <div className={`p-2.5 sm:p-3 rounded-xl shrink-0 ${colors[color]}`}>
+          <Icon size={22} />
         </div>
       </div>
     </div>
@@ -211,18 +211,38 @@ export function FieldError({ message }) {
 }
 
 export function Modal({ open, onClose, title, children, size = 'md', alert }) {
-  const sizes = { md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
+  const sizes = {
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    full: 'max-w-full',
+  };
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full ${sizes[size] || sizes.md} max-h-[90vh] overflow-auto`}>
-        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
-          <h2 className="text-lg font-bold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div
+        className={`relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl w-full ${sizes[size] || sizes.md} max-h-[min(100dvh,920px)] sm:max-h-[90vh] overflow-hidden flex flex-col`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="flex items-center justify-between gap-3 p-4 sm:p-6 border-b dark:border-gray-700 shrink-0">
+          <h2 className="text-base sm:text-lg font-bold truncate">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-2 -m-1 rounded-lg"
+            aria-label="إغلاق"
+          >
+            ✕
+          </button>
         </div>
-        <div className="p-6">
-          {alert ? <div className="mb-4"><FormAlert message={alert} /></div> : null}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 safe-pb">
+          {alert ? (
+            <div className="mb-4">
+              <FormAlert message={alert} />
+            </div>
+          ) : null}
           {children}
         </div>
       </div>

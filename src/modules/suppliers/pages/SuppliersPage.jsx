@@ -8,6 +8,7 @@ import { useConfirm } from '@shared/hooks/useConfirm';
 import { suppliersApi } from '@modules/suppliers/api/suppliers.api';
 import { LoadingSpinner, Modal, FieldError, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const emptySupplier = { name: '', phone: '', email: '', address: '', notes: '' };
 
@@ -78,8 +79,8 @@ export default function SuppliersPage() {
         <EmptyState message="لا يوجد موردون" />
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <TableScroll>
+            <table className="admin-table">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="text-right p-4">الاسم</th>
@@ -124,7 +125,7 @@ export default function SuppliersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
           <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
         </>
       )}

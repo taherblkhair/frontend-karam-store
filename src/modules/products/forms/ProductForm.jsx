@@ -146,7 +146,7 @@ export function ProductForm({ initial, categories, colors, sizes, brands, onSubm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto px-1">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 px-0.5">
       <FormAlert message={clientError} />
 
       <input className="input" placeholder="اسم المنتج *" required value={form.name_ar} onChange={(e) => setForm({ ...form, name_ar: e.target.value })} />
