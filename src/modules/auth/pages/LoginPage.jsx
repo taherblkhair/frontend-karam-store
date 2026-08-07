@@ -37,7 +37,10 @@ export default function LoginPage() {
         password: form.password,
       });
       notifySuccess(res);
-      const nextUser = res.data.user;
+      const nextUser = res?.data?.user;
+      if (!nextUser) {
+        throw { message: 'فشل تسجيل الدخول: لم يُرجع الخادم بيانات المستخدم' };
+      }
       if (nextUser.role === 'customer') navigate('/account');
       else navigate('/admin');
     } catch (err) {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
+import { resolveMediaUrl } from '@core/api/config.js';
 
 function buildProductGallery(product) {
   const items = [];
@@ -47,7 +48,7 @@ export function ProductCard({ product }) {
       <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
         {active?.image ? (
           <img
-            src={active.image}
+            src={resolveMediaUrl(active.image)}
             alt={product.name_ar}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -83,7 +84,7 @@ export function ProductCard({ product }) {
                 }`}
               >
                 <img
-                  src={item.image}
+                  src={resolveMediaUrl(item.image)}
                   alt=""
                   className="w-9 h-9 object-cover bg-gray-50 dark:bg-gray-700"
                 />
