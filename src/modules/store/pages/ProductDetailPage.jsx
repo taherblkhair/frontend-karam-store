@@ -10,9 +10,15 @@ import { ProductImageGallery } from '@modules/store/components/ProductImageGalle
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
 import { startBuyNow } from '@modules/store/utils/buyNow';
+import {
+  decodeProductSlug,
+  productAbsoluteUrl,
+  productPath,
+} from '@modules/store/utils/productPaths';
 
 export default function ProductDetailPage() {
-  const { slug } = useParams();
+  const { slug: slugParam } = useParams();
+  const slug = decodeProductSlug(slugParam);
   const navigate = useNavigate();
   const { addItem } = useCart();
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -22,9 +28,18 @@ export default function ProductDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['product', slug],
     queryFn: () => storeApi.productBySlug(slug),
+    enabled: Boolean(slug),
   });
 
   const product = data?.data;
+
+  // Canonical clean URL: /product/human-slug (rewrites old numeric ids)
+  useEffect(() => {
+    if (!product?.slug) return;
+    if (product.slug !== slug) {
+      navigate(productPath(product), { replace: true });
+    }
+  }, [product, slug, navigate]);
 
   useEffect(() => {
     setSelectedVariant(null);
@@ -44,7 +59,7 @@ export default function ProductDetailPage() {
   );
 
   const handleCopyLink = async () => {
-    const url = window.location.href;
+    const url = productAbsoluteUrl(product || slug);
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
@@ -170,7 +185,7 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="btn-outline shrink-0 text-sm rounded-full"
+                className="btn-outline shrink-0 text-sm rounded-full inline-flex items-center gap-1.5"
                 title="نسخ رابط المنتج"
               >
                 {linkCopied ? <Check size={16} className="text-primary-600" /> : <Link2 size={16} />}

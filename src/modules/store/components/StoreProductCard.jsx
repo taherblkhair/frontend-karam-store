@@ -3,6 +3,7 @@ import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
 import { OptimizedImage } from '@shared/components/OptimizedImage';
+import { productPath } from '@modules/store/utils/productPaths';
 
 const WISHLIST_KEY = 'karam-wishlist-ids';
 
@@ -71,7 +72,7 @@ export function StoreProductCard({
 }) {
   const { isSaved, toggle } = useWishlist();
   const image = productImage(product);
-  const href = `/products/${product.slug || product.id}`;
+  const href = productPath(product);
   const saved = isSaved(product.id);
   const hasDiscount =
     product.compare_price &&

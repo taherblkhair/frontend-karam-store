@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ProtectedRoute, GuestRoute } from '@core/auth/ProtectedRoute';
 import AdminLayout from '@shared/layouts/AdminLayout';
 
@@ -27,6 +27,12 @@ import SettingsPage from '@modules/settings/pages/SettingsPage';
 import UsersPage from '@modules/users/pages/UsersPage';
 import POSPage from '@modules/sales/pages/POSPage';
 
+/** Legacy /products/:slug → clean /product/:slug */
+function LegacyProductRedirect() {
+  const { slug } = useParams();
+  return <Navigate to={`/product/${slug}`} replace />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -34,7 +40,8 @@ export function AppRouter() {
         {/* Storefront */}
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={<StoreProductsPage />} />
-        <Route path="/products/:slug" element={<ProductDetailPage />} />
+        <Route path="/product/:slug" element={<ProductDetailPage />} />
+        <Route path="/products/:slug" element={<LegacyProductRedirect />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
 
