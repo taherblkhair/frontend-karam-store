@@ -9,5 +9,6 @@ export const ordersApi = {
   updateShippingLabel: (id, shipping_label) =>
     api.patch(`${endpoints.orders}/${id}/shipping-label`, { shipping_label }),
   generateShippingLabel: (id) => api.post(`${endpoints.orders}/${id}/shipping-label/generate`),
+  syncSabil: (id, data = {}) => api.post(`${endpoints.orders}/${id}/sabil/sync`, data),
   remove: (id) => api.delete(`${endpoints.orders}/${id}`),
 };
