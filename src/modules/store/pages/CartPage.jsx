@@ -4,6 +4,7 @@ import StoreLayout from '@shared/layouts/StoreLayout';
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
 import { EmptyState } from '@shared/ui';
+import { OptimizedThumb } from '@shared/components/OptimizedImage';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
@@ -20,9 +21,9 @@ export default function CartPage() {
             <div className="lg:col-span-2 space-y-4">
               {items.map((item) => (
                 <div key={item.key} className="card p-4 flex gap-4">
-                  <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="w-24 h-24 bg-tertiary-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
                     {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      <OptimizedThumb src={item.image} alt={item.name} className="w-full h-full" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">لا صورة</div>
                     )}

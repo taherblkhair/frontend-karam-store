@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { resolveMediaUrl } from '@core/api/config.js';
+import { buildResponsiveMedia } from '@core/api/config.js';
 
 const SWIPE_THRESHOLD_PX = 48;
 const TRANSITION_MS = 500;
@@ -29,18 +29,21 @@ function FallbackHero() {
 function SlideContent({ banner, priority }) {
   const href = banner.link?.trim() || '/products';
   const isExternal = /^https?:\/\//i.test(href);
-  const media = resolveMediaUrl(banner.image);
+  const media = buildResponsiveMedia(banner.image, { widths: [800, 1200] });
   const hasText = Boolean(banner.title_ar || banner.subtitle_ar);
   const label = banner.title_ar || 'بنر';
 
   const inner = (
     <>
       <img
-        src={media}
+        src={media.src}
+        srcSet={media.srcSet || undefined}
+        sizes="100vw"
         alt={label}
         className="absolute inset-0 h-full w-full object-cover object-center"
         loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
+        decoding={priority ? 'sync' : 'async'}
+        fetchPriority={priority ? 'high' : 'auto'}
         draggable={false}
       />
       <div

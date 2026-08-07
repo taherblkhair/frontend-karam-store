@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
-import { resolveMediaUrl } from '@core/api/config.js';
+import { OptimizedImage, OptimizedThumb } from '@shared/components/OptimizedImage';
 
 function buildProductGallery(product) {
   const items = [];
@@ -45,15 +45,18 @@ export function ProductCard({ product }) {
       to={`/products/${product.slug || product.id}`}
       className="card group overflow-hidden hover:shadow-lg transition-shadow"
     >
-      <div className="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
+      <div className="aspect-square overflow-hidden">
         {active?.image ? (
-          <img
-            src={resolveMediaUrl(active.image)}
+          <OptimizedImage
+            src={active.image}
             alt={product.name_ar}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full"
+            imgClassName="group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+            widths={[400, 800]}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div className="w-full h-full flex items-center justify-center bg-tertiary-100 text-ink-300 text-sm">
             لا توجد صورة
           </div>
         )}
@@ -77,17 +80,13 @@ export function ProductCard({ product }) {
                   e.stopPropagation();
                   setActiveIdx(idx);
                 }}
-                className={`shrink-0 rounded-md overflow-hidden border-2 transition ${
+                className={`shrink-0 rounded-md overflow-hidden border-2 transition w-9 h-9 ${
                   isActive
                     ? 'border-primary-500 ring-1 ring-primary-500'
                     : 'border-gray-200 dark:border-gray-600 hover:border-primary-300'
                 }`}
               >
-                <img
-                  src={resolveMediaUrl(item.image)}
-                  alt=""
-                  className="w-9 h-9 object-cover bg-gray-50 dark:bg-gray-700"
-                />
+                <OptimizedThumb src={item.image} alt="" className="w-full h-full" />
               </button>
             );
           })}
@@ -96,7 +95,6 @@ export function ProductCard({ product }) {
           )}
         </div>
       )}
-
       <div className="p-4">
         <h3 className="font-medium line-clamp-2 mb-2">{product.name_ar}</h3>
 
