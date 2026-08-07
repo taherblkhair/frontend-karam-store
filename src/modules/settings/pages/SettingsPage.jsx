@@ -10,19 +10,47 @@ import {
   Check,
   MapPin,
   Share2,
+  Construction,
 } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { settingsApi } from '@modules/settings/api/settings.api';
 import { LoadingSpinner, FormAlert } from '@shared/ui';
 import { ImageUpload } from '@shared/components/ImageUpload';
+import {
+  SITE_STATUS,
+  normalizeSiteStatus,
+  siteStatusLabelAr,
+} from '@modules/store/utils/siteStatus';
 
 const TABS = [
+  { id: 'status', label: 'حالة الموقع', icon: Construction },
   { id: 'identity', label: 'الهوية', icon: Store },
   { id: 'contact', label: 'التواصل', icon: Phone },
   { id: 'social', label: 'وسائل التواصل', icon: Share2 },
   { id: 'currency', label: 'العملة', icon: Coins },
   { id: 'shipping', label: 'أسعار التوصيل', icon: Truck },
+];
+
+const SITE_STATUS_OPTIONS = [
+  {
+    value: SITE_STATUS.ONLINE,
+    title: 'مفتوح',
+    desc: 'المتجر يعمل بشكل طبيعي ويمكن للعملاء التصفح والطلب.',
+    tone: 'border-green-300 bg-green-50 dark:bg-green-900/20',
+  },
+  {
+    value: SITE_STATUS.MAINTENANCE,
+    title: 'قيد الصيانة',
+    desc: 'إيقاف كامل: لا تصفح ولا طلبات ولا تسجيل عملاء. الإدارة ونقطة البيع تبقى متاحة.',
+    tone: 'border-amber-300 bg-amber-50 dark:bg-amber-900/20',
+  },
+  {
+    value: SITE_STATUS.DEVELOPMENT,
+    title: 'قيد التطوير',
+    desc: 'نفس الإيقاف للعملاء، مع رسالة تناسب موقع تحت الإنشاء أو التحديث.',
+    tone: 'border-blue-300 bg-blue-50 dark:bg-blue-900/20',
+  },
 ];
 
 const SOCIAL_FIELDS = [
@@ -86,8 +114,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!data?.data) return;
-    setForm(data.data);
-    setSavedSnapshot(JSON.stringify(data.data));
+    const next = {
+      ...data.data,
+      site_status: normalizeSiteStatus(data.data.site_status),
+      site_status_message: data.data.site_status_message || '',
+    };
+    setForm(next);
+    setSavedSnapshot(JSON.stringify(next));
   }, [data]);
 
   useEffect(() => {
@@ -167,7 +200,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const main = document.querySelector('main');
     if (main) main.scrollTo({ top: 0 });
-    window.scrollTo(0, 0);  }, [tab]);
+    window.scrollTo(0, 0);
+  }, [tab]);
 
   const saveSettings = (e) => {
     e?.preventDefault();
@@ -216,7 +250,7 @@ export default function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">إعدادات الموقع</h1>
         <p className="text-sm text-gray-500 mt-1">
-          إدارة هوية المتجر، بيانات التواصل، وسائل التواصل الاجتماعي، والعملة وأسعار التوصيل.
+          إدارة حالة الموقع، الهوية، التواصل، والعملة وأسعار التوصيل.
         </p>
       </div>
 
@@ -238,6 +272,17 @@ export default function SettingsPage() {
             {form.store_phone ? ` · ${form.store_phone}` : ''}
           </p>
         </div>
+        <span
+          className={`badge shrink-0 ${
+            normalizeSiteStatus(form.site_status) === SITE_STATUS.ONLINE
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+              : normalizeSiteStatus(form.site_status) === SITE_STATUS.DEVELOPMENT
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+          }`}
+        >
+          {siteStatusLabelAr(form.site_status)}
+        </span>
         {isDirty ? (
           <span className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 shrink-0">
             تعديلات غير محفوظة
@@ -276,6 +321,63 @@ export default function SettingsPage() {
           );
         })}
       </div>
+
+      {/* Site status */}
+      {tab === 'status' && (
+        <form onSubmit={saveSettings} className="card p-6 space-y-5">
+          <div>
+            <h2 className="font-bold text-lg">حالة الموقع للمتجر الإلكتروني</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              عند التعطيل تُغلق واجهة العملاء بالكامل ولا تُقبل طلبات الموقع أو التسجيل. لوحة الإدارة ونقطة البيع تظلان تعملان.
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            {SITE_STATUS_OPTIONS.map((opt) => {
+              const active = normalizeSiteStatus(form.site_status) === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setField('site_status', opt.value)}
+                  className={`text-right rounded-xl border-2 p-4 transition ${
+                    active
+                      ? `${opt.tone} border-current shadow-sm`
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 bg-white dark:bg-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold text-base">{opt.title}</span>
+                    <span
+                      className={`h-4 w-4 rounded-full border-2 shrink-0 ${
+                        active
+                          ? 'border-primary-600 bg-primary-600'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
+                    {opt.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <Field
+            label="رسالة مخصصة (اختياري)"
+            hint="تظهر للزوار بدل الرسالة الافتراضية"
+          >
+            <textarea
+              className="input min-h-[100px] resize-y"
+              value={form.site_status_message || ''}
+              onChange={(e) => setField('site_status_message', e.target.value)}
+              placeholder="مثال: نعود يوم السبت بعد صيانة سريعة…"
+              disabled={normalizeSiteStatus(form.site_status) === SITE_STATUS.ONLINE}
+            />
+          </Field>
+        </form>
+      )}
 
       {/* Identity */}
       {tab === 'identity' && (

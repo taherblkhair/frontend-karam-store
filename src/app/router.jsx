@@ -1,12 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ProtectedRoute, GuestRoute } from '@core/auth/ProtectedRoute';
 import AdminLayout from '@shared/layouts/AdminLayout';
+import StoreAccessGate from '@modules/store/components/StoreAccessGate';
 
 import HomePage from '@modules/store/pages/HomePage';
 import StoreProductsPage from '@modules/store/pages/ProductsPage';
 import ProductDetailPage from '@modules/store/pages/ProductDetailPage';
 import CartPage from '@modules/store/pages/CartPage';
 import CheckoutPage from '@modules/store/pages/CheckoutPage';
+import NotFoundPage from '@modules/store/pages/NotFoundPage';
+import PublicCatchAll from '@modules/store/pages/PublicCatchAll';
 
 import LoginPage from '@modules/auth/pages/LoginPage';
 import RegisterPage from '@modules/auth/pages/RegisterPage';
@@ -37,25 +40,28 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Storefront */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/products" element={<StoreProductsPage />} />
-        <Route path="/product/:slug" element={<ProductDetailPage />} />
-        <Route path="/products/:slug" element={<LegacyProductRedirect />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
+        {/* Storefront — blocked when site is in maintenance / development */}
+        <Route element={<StoreAccessGate />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<StoreProductsPage />} />
+          <Route path="/product/:slug" element={<ProductDetailPage />} />
+          <Route path="/products/:slug" element={<LegacyProductRedirect />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route element={<GuestRoute />}>
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={['customer']} />}>
+            <Route path="/account" element={<AccountPage />} />
+          </Route>
+        </Route>
 
-        {/* Auth */}
+        {/* Auth: login always available (staff need it when shop is closed) */}
         <Route element={<GuestRoute />}>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
         </Route>
 
-        <Route element={<ProtectedRoute roles={['customer']} />}>
-          <Route path="/account" element={<AccountPage />} />
-        </Route>
-
-        {/* Admin / POS */}
+        {/* Admin / POS — always available */}
         <Route element={<ProtectedRoute roles={['admin', 'sales']} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
@@ -73,8 +79,12 @@ export function AppRouter() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="pos" element={<POSPage />} />
+            <Route path="*" element={<NotFoundPage bare />} />
           </Route>
         </Route>
+
+        {/* Catch-all: 404 (or closed site message) */}
+        <Route path="*" element={<PublicCatchAll />} />
       </Routes>
     </BrowserRouter>
   );
