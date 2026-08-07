@@ -14,4 +14,7 @@ export const productsApi = {
   colors: () => api.get(endpoints.colors),
   sizes: () => api.get(endpoints.sizes),
   brands: () => api.get(endpoints.brands),
+  createColor: (data) => api.post(endpoints.colors, data),
+  createSize: (data) => api.post(endpoints.sizes, data),
+  createBrand: (data) => api.post(endpoints.brands, data),
 };
