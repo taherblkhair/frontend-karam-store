@@ -9,6 +9,7 @@ import {
   Search,
   Check,
   MapPin,
+  Share2,
 } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
@@ -19,8 +20,37 @@ import { ImageUpload } from '@shared/components/ImageUpload';
 const TABS = [
   { id: 'identity', label: 'الهوية', icon: Store },
   { id: 'contact', label: 'التواصل', icon: Phone },
+  { id: 'social', label: 'وسائل التواصل', icon: Share2 },
   { id: 'currency', label: 'العملة', icon: Coins },
   { id: 'shipping', label: 'أسعار التوصيل', icon: Truck },
+];
+
+const SOCIAL_FIELDS = [
+  {
+    key: 'social_instagram',
+    label: 'Instagram',
+    placeholder: 'https://instagram.com/karamstore',
+  },
+  {
+    key: 'social_facebook',
+    label: 'Facebook',
+    placeholder: 'https://facebook.com/karamstore',
+  },
+  {
+    key: 'social_telegram',
+    label: 'Telegram',
+    placeholder: 'https://t.me/karamstore',
+  },
+  {
+    key: 'social_snapchat',
+    label: 'Snapchat',
+    placeholder: 'https://snapchat.com/add/karamstore',
+  },
+  {
+    key: 'social_tiktok',
+    label: 'TikTok',
+    placeholder: 'https://tiktok.com/@karamstore',
+  },
 ];
 
 function Field({ label, hint, children }) {
@@ -105,9 +135,15 @@ export default function SettingsPage() {
   const updateMutation = useMutation({
     mutationFn: settingsApi.update,
     onSuccess: (res) => {
-      queryClient.invalidateQueries(['admin-settings']);
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
       clearErrors();
       notifySuccess(res);
+      if (res?.data) {
+        setForm(res.data);
+        setSavedSnapshot(JSON.stringify(res.data));
+      }
     },
     onError: (err) => {
       applyApiError(err);
@@ -127,9 +163,20 @@ export default function SettingsPage() {
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Reset scroll when switching tabs so sticky footer doesn't trap mid-page focus
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (main) main.scrollTo({ top: 0 });
+    window.scrollTo(0, 0);  }, [tab]);
+
   const saveSettings = (e) => {
     e?.preventDefault();
-    updateMutation.mutate(form);
+    // Normalize social URLs on save only
+    const payload = { ...form };
+    for (const { key } of SOCIAL_FIELDS) {
+      if (payload[key] != null) payload[key] = String(payload[key]).trim();
+    }
+    updateMutation.mutate(payload);
   };
 
   const saveCityRate = (cityId) => {
@@ -165,11 +212,11 @@ export default function SettingsPage() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl pb-28 sm:pb-24">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">إعدادات الموقع</h1>
         <p className="text-sm text-gray-500 mt-1">
-          إدارة هوية المتجر، بيانات التواصل، والعملة وأسعار التوصيل للمدن الليبية.
+          إدارة هوية المتجر، بيانات التواصل، وسائل التواصل الاجتماعي، والعملة وأسعار التوصيل.
         </p>
       </div>
 
@@ -307,6 +354,49 @@ export default function SettingsPage() {
                 placeholder="طرابلس، ليبيا"
               />
             </Field>
+          </div>
+        </form>
+      )}
+
+      {/* Social media */}
+      {tab === 'social' && (
+        <form onSubmit={saveSettings} className="card p-5 sm:p-6 space-y-5">
+          <div>
+            <h2 className="font-bold text-lg">وسائل التواصل الاجتماعي</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              أضف روابط الحسابات — تظهر تلقائياً في تذييل المتجر. اترك الحقل فارغاً لإخفاء المنصة.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-5">
+            {SOCIAL_FIELDS.map((field) => (
+              <Field key={field.key} label={field.label} hint="رابط كامل يبدأ بـ https://">
+                <input
+                  className="input"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  dir="ltr"
+                  value={form[field.key] || ''}
+                  onChange={(e) => setField(field.key, e.target.value)}
+                  onBlur={(e) => setField(field.key, e.target.value.trim())}
+                  placeholder={field.placeholder}
+                />
+              </Field>
+            ))}
+          </div>
+          {/* In-form save so last fields stay reachable without sticky overlay issues */}
+          <div className="pt-2 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-100 dark:border-gray-700">
+            <p className="text-sm text-gray-500">
+              {isDirty ? 'هناك تغييرات لم تُحفظ بعد' : 'جميع الإعدادات محفوظة'}
+            </p>
+            <button
+              type="submit"
+              className="btn-primary w-full sm:w-auto"
+              disabled={!isDirty || updateMutation.isPending}
+            >
+              <Save size={16} />
+              {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+            </button>
           </div>
         </form>
       )}
@@ -468,16 +558,16 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Sticky save for general settings tabs */}
-      {tab !== 'shipping' && (
-        <div className="sticky bottom-0 z-10 mt-6 pt-2 pb-1 bg-gradient-to-t from-gray-100 via-gray-100 to-transparent dark:from-gray-900 dark:via-gray-900">
-          <div className="card px-4 py-3 flex items-center justify-between gap-3 shadow-md">
+      {/* Sticky save for tabs without their own submit row (social has in-form save) */}
+      {tab !== 'shipping' && tab !== 'social' && (
+        <div className="sticky bottom-0 z-20 mt-8 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 shadow-[0_-6px_24px_rgba(0,0,0,0.06)]">
+          <div className="px-4 py-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-gray-500">
               {isDirty ? 'هناك تغييرات لم تُحفظ بعد' : 'جميع الإعدادات محفوظة'}
             </p>
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
               disabled={!isDirty || updateMutation.isPending}
               onClick={saveSettings}
             >

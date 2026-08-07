@@ -11,7 +11,7 @@ function FallbackHero() {
     <section className="relative w-full overflow-hidden bg-gradient-to-l from-primary-700 to-primary-900">
       <div className="aspect-[5/4] sm:aspect-[16/7] lg:aspect-[21/8] flex items-center">
         <div className="container mx-auto px-4 text-white py-10" dir="rtl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 max-w-2xl leading-tight">
+          <h1 className="text-3xl sm:text-4xl  text-white md:text-5xl font-bold mb-3 max-w-2xl leading-tight">
             متجر كرم — أفضل الحقائب في ليبيا
           </h1>
           <p className="text-base sm:text-lg opacity-90 mb-6 max-w-xl">
@@ -60,7 +60,7 @@ function SlideContent({ banner, priority }) {
         >
           <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-0 text-white max-w-3xl">
             {banner.title_ar ? (
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 leading-tight drop-shadow-md line-clamp-3">
+              <h2 className="text-2xl text-white/90 sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 leading-tight drop-shadow-md line-clamp-3">
                 {banner.title_ar}
               </h2>
             ) : null}

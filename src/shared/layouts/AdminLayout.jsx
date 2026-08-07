@@ -62,7 +62,7 @@ export default function AdminLayout() {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-[100dvh] flex bg-gray-100 dark:bg-gray-900">
+    <div className="h-[100dvh] flex overflow-hidden bg-gray-100 dark:bg-gray-900">
       <aside
         className={`fixed inset-y-0 right-0 z-50 w-[min(18rem,85vw)] max-w-full bg-white dark:bg-gray-800 border-l dark:border-gray-700 transform transition-transform duration-200 ease-out flex flex-col safe-pt ${
           sidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'
@@ -147,8 +147,8 @@ export default function AdminLayout() {
         />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh]">
-        <header className="h-14 sm:h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between gap-3 px-3 sm:px-6 sticky top-0 z-30 safe-pt">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full">
+        <header className="h-14 sm:h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between gap-3 px-3 sm:px-6 z-30 shrink-0 safe-pt">
           <button
             type="button"
             className={`p-2 -mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${isPos ? '' : 'lg:hidden'}`}
@@ -170,7 +170,7 @@ export default function AdminLayout() {
           </button>
         </header>
         <main
-          className={`flex-1 overflow-auto overscroll-contain safe-pb ${
+          className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain safe-pb ${
             isPos ? 'p-2 sm:p-4' : 'p-3 sm:p-4 lg:p-6'
           }`}
         >

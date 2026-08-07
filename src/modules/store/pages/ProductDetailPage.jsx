@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Link2, Check, Zap } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
@@ -9,12 +9,15 @@ import { LoadingSpinner } from '@shared/ui';
 import { ProductImageGallery } from '@modules/store/components/ProductImageGallery';
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
+import { startBuyNow } from '@modules/store/utils/buyNow';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const { addItem } = useCart();
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -23,10 +26,10 @@ export default function ProductDetailPage() {
 
   const product = data?.data;
 
-  // Reset selection when navigating to another product
   useEffect(() => {
     setSelectedVariant(null);
     setQuantity(1);
+    setLinkCopied(false);
   }, [slug]);
 
   const handleVariantImageSelect = useCallback(
@@ -39,6 +42,27 @@ export default function ProductDetailPage() {
     },
     [product]
   );
+
+  const handleCopyLink = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setLinkCopied(true);
+      notifySuccess({ message: 'تم نسخ رابط المنتج' });
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      notifyError({ message: 'تعذر نسخ الرابط' });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -60,21 +84,36 @@ export default function ProductDetailPage() {
   const currentPrice = selectedVariant?.price || product.price;
   const currentStock = selectedVariant?.stock ?? product.total_stock;
 
-  const handleAddToCart = () => {
+  const ensureVariant = () => {
     if (hasVariants && !selectedVariant) {
       notifyError({ message: 'يرجى اختيار اللون والمقاس' });
-      return;
+      return false;
     }
     if (currentStock <= 0) {
       notifyError({ message: 'المنتج غير متوفر' });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const handleAddToCart = () => {
+    if (!ensureVariant()) return;
     const result = addItem(product, selectedVariant, quantity);
     if (!result?.ok) {
       notifyError({ message: result?.message });
       return;
     }
     notifySuccess({ message: result?.message || 'تمت الإضافة للسلة' });
+  };
+
+  const handleOrderNow = () => {
+    if (!ensureVariant()) return;
+    const result = startBuyNow(product, selectedVariant, quantity);
+    if (!result?.ok) {
+      notifyError({ message: result?.message });
+      return;
+    }
+    navigate('/checkout?mode=buy-now');
   };
 
   const selectColor = (colorId) => {
@@ -126,7 +165,19 @@ export default function ProductDetailPage() {
           />
 
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name_ar}</h1>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold flex-1">{product.name_ar}</h1>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="btn-outline shrink-0 text-sm rounded-full"
+                title="نسخ رابط المنتج"
+              >
+                {linkCopied ? <Check size={16} className="text-primary-600" /> : <Link2 size={16} />}
+                {linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
+              </button>
+            </div>
+
             {product.category_name && (
               <p className="text-gray-500 mb-4">{product.category_name}</p>
             )}
@@ -231,14 +282,28 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={currentStock <= 0}
-              className="btn-primary w-full md:w-auto text-lg py-3 px-8"
-            >
-              <ShoppingCart size={20} /> أضف للسلة
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={handleOrderNow}
+                disabled={currentStock <= 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary-400 hover:bg-secondary-500 text-ink-800 font-bold text-lg py-3.5 px-8 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+              >
+                <Zap size={20} strokeWidth={2.25} />
+                اطلب الآن
+              </button>
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={currentStock <= 0}
+                className="btn-primary text-lg py-3.5 px-8 flex-1"
+              >
+                <ShoppingCart size={20} /> أضف للسلة
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-ink-400">
+              «اطلب الآن» ينقلك مباشرة لإتمام الطلب لهذا المنتج فقط دون التأثير على محتويات السلة.
+            </p>
           </div>
         </div>
       </div>

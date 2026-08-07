@@ -130,6 +130,27 @@ function FilterFields({
           ))}
         </select>
       </div>
+      <div>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">العروض</h3>
+        <label className="flex items-center gap-2 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            className="rounded border-ink-200 text-primary-600 focus:ring-primary-600"
+            checked={filters.featured === 'true'}
+            onChange={(e) => updateFilter('featured', e.target.checked ? 'true' : '')}
+          />
+          عروض مميزة فقط
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm mt-2">
+          <input
+            type="checkbox"
+            className="rounded border-ink-200 text-primary-600 focus:ring-primary-600"
+            checked={filters.is_new === 'true'}
+            onChange={(e) => updateFilter('is_new', e.target.checked ? 'true' : '')}
+          />
+          وصل حديثاً فقط
+        </label>
+      </div>
     </div>
   );
 }
@@ -168,6 +189,7 @@ export default function ProductsPage() {
     color: params.get('color') || '',
     size: params.get('size') || '',
     is_new: params.get('is_new') || '',
+    featured: params.get('featured') || '',
     sort: SORT_PRESETS[sortKey] ? sortKey : 'newest',
     page: params.get('page') || '1',
     sortBy: sortPreset.sortBy,
@@ -182,6 +204,7 @@ export default function ProductsPage() {
     filters.color,
     filters.size,
     filters.is_new,
+    filters.featured,
     filters.sort !== 'newest' ? filters.sort : '',
   ].filter(Boolean).length;
 
@@ -194,6 +217,7 @@ export default function ProductsPage() {
       color: filters.color || undefined,
       size: filters.size || undefined,
       is_new: filters.is_new || undefined,
+      featured: filters.featured || undefined,
       page: filters.page,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
@@ -259,7 +283,13 @@ export default function ProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl text-primary-600">المنتجات</h1>
+            <h1 className="text-2xl sm:text-3xl text-primary-600">
+              {filters.featured === 'true'
+                ? 'عروض مميزة'
+                : filters.is_new === 'true'
+                  ? 'وصل حديثاً'
+                  : 'المنتجات'}
+            </h1>
             {pagination?.total != null && (
               <p className="text-sm text-ink-400 mt-1">{pagination.total} منتج</p>
             )}
