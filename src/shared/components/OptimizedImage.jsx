@@ -7,6 +7,7 @@ import { buildResponsiveMedia } from '@core/api/config.js';
  * - responsive srcset for WebP variants
  * - shimmer placeholder until load
  * - fade-in once ready
+ * - optional progressive LQIP (tiny src while large loads)
  */
 export function OptimizedImage({
   src,
@@ -17,11 +18,15 @@ export function OptimizedImage({
   widths,
   priority = false,
   objectFit = 'cover',
+  preferSrcWidth,
 }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const media = buildResponsiveMedia(src, { widths });
+  const media = buildResponsiveMedia(src, {
+    widths: widths || [400, 800],
+    preferSrcWidth,
+  });
   const displaySrc = media.src;
 
   useEffect(() => {
@@ -42,7 +47,10 @@ export function OptimizedImage({
   }
 
   return (
-    <div className={`relative overflow-hidden bg-tertiary-200 ${className}`}>
+    <div
+      className={`relative overflow-hidden bg-tertiary-200 ${className}`}
+      style={{ contentVisibility: priority ? undefined : 'auto' }}
+    >
       {!loaded && (
         <div
           className="absolute inset-0 animate-pulse bg-gradient-to-br from-tertiary-100 via-tertiary-200 to-tertiary-100"
@@ -56,8 +64,8 @@ export function OptimizedImage({
         sizes={media.srcSet ? sizes : undefined}
         alt={alt}
         loading={priority ? 'eager' : 'lazy'}
-        decoding={priority ? 'sync' : 'async'}
-        fetchPriority={priority ? 'high' : 'auto'}
+        decoding="async"
+        fetchPriority={priority ? 'high' : 'low'}
         draggable={false}
         onLoad={() => setLoaded(true)}
         onError={() => {
@@ -72,15 +80,23 @@ export function OptimizedImage({
   );
 }
 
-/** Tiny thumb — smaller sizes for galleries and lists. */
-export function OptimizedThumb({ src, alt = '', className = '', priority = false }) {
+/** Tiny thumb — 400w WebP only, lazy by default. */
+export function OptimizedThumb({
+  src,
+  alt = '',
+  className = '',
+  priority = false,
+  imgClassName = '',
+}) {
   return (
     <OptimizedImage
       src={src}
       alt={alt}
       className={className}
-      sizes="80px"
+      imgClassName={imgClassName}
+      sizes="64px"
       widths={[400]}
+      preferSrcWidth={400}
       priority={priority}
     />
   );

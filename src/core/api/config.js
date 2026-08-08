@@ -80,7 +80,7 @@ export function hasResponsiveVariants(url) {
 /**
  * Build src + srcSet for product/banner images.
  * @param {string} [url]
- * @param {{ widths?: number[] }} [options]
+ * @param {{ widths?: number[], preferSrcWidth?: number }} [options]
  * @returns {{ src: string, srcSet?: string }}
  */
 export function buildResponsiveMedia(url, options = {}) {
@@ -92,15 +92,23 @@ export function buildResponsiveMedia(url, options = {}) {
   }
 
   const widths = options.widths || MEDIA_VARIANT_WIDTHS;
-  const srcSet = [...widths, 1600]
-    .filter((w, i, arr) => arr.indexOf(w) === i)
+  const usable = widths.filter((w) => w > 0 && w < 1600);
+  const list = [...usable, 1600].filter((w, i, arr) => arr.indexOf(w) === i).sort((a, b) => a - b);
+
+  const srcSet = list
     .map((w) => {
       const u = w >= 1600 ? absolute : mediaVariantUrl(url, w);
       return `${u} ${w}w`;
     })
     .join(', ');
 
-  // Mid size as default `src` for browsers without srcset support
-  const src = mediaVariantUrl(url, 800) || absolute;
+  // Prefer smallest sensible file for default src (thumbs → 400; cards → 800)
+  const prefer =
+    options.preferSrcWidth ||
+    (usable.length ? Math.min(800, Math.max(...usable)) : 800);
+  const srcW = usable.includes(prefer)
+    ? prefer
+    : usable.find((w) => w >= prefer) || usable[usable.length - 1] || 800;
+  const src = mediaVariantUrl(url, srcW) || absolute;
   return { src, srcSet };
 }

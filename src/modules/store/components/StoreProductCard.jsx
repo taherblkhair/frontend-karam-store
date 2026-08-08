@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
-import { OptimizedImage } from '@shared/components/OptimizedImage';
+import { OptimizedImage, OptimizedThumb } from '@shared/components/OptimizedImage';
 import { productPath } from '@modules/store/utils/productPaths';
 
 const WISHLIST_KEY = 'karam-wishlist-ids';
+/** Max thumbnail chips — rest still available on product page */
+const MAX_VISIBLE_THUMBS = 5;
 
 function readWishlist() {
   try {
@@ -51,27 +53,69 @@ export function useWishlist() {
   return { ids, isSaved, toggle };
 }
 
-function productImage(product) {
-  return (
-    product?.primary_image ||
-    product?.variants?.find((v) => v?.image)?.image ||
-    null
-  );
+/**
+ * Primary + unique variant images for card preview.
+ * Prefers API `variant_images` (lean home payload); falls back to `variants`.
+ */
+export function buildCardImageGallery(product) {
+  const items = [];
+  const seen = new Set();
+
+  const push = (item) => {
+    const img = item?.image;
+    if (!img || seen.has(img)) return;
+    seen.add(img);
+    items.push(item);
+  };
+
+  if (product?.primary_image) {
+    push({
+      key: 'primary',
+      image: product.primary_image,
+      color_name: null,
+      hex_code: null,
+    });
+  }
+
+  const list = product?.variant_images?.length
+    ? product.variant_images
+    : product?.variants || [];
+
+  for (const v of list) {
+    push({
+      key: `v-${v.id ?? items.length}`,
+      image: v.image,
+      color_name: v.color_name || null,
+      hex_code: v.hex_code || null,
+    });
+  }
+
+  return items;
 }
 
 /**
- * Unified storefront product card (design system):
- * 4:5 image · favorite · badge · name · price
- * Used for: وصل حديثاً · الأكثر مبيعاً · grid listings
+ * Unified storefront product card:
+ * main photo · variant thumbs · badge · price
+ * Images are lazy-loaded thumbs (400w) to keep homepage fast.
  */
 export function StoreProductCard({
   product,
   badge,
   showNewBadge = false,
+  showVariantImages = true,
+  priority = false,
   className = '',
 }) {
   const { isSaved, toggle } = useWishlist();
-  const image = productImage(product);
+  const gallery = useMemo(() => buildCardImageGallery(product), [product]);
+  const [activeKey, setActiveKey] = useState(gallery[0]?.key || null);
+
+  useEffect(() => {
+    setActiveKey(gallery[0]?.key || null);
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const active = gallery.find((g) => g.key === activeKey) || gallery[0] || null;
+  const image = active?.image || null;
   const href = productPath(product);
   const saved = isSaved(product.id);
   const hasDiscount =
@@ -84,18 +128,31 @@ export function StoreProductCard({
     (showNewBadge || product.is_new ? 'جديد' : null) ||
     (hasDiscount ? 'عرض' : null);
 
+  const thumbs = showVariantImages ? gallery.slice(0, MAX_VISIBLE_THUMBS) : [];
+  const showThumbs = thumbs.length > 1;
+
   return (
-    <article className={`group ${className}`}>
-      <div className="relative overflow-hidden rounded-xl bg-tertiary-100">
-        <Link to={href} className="block aspect-[4/5] overflow-hidden">
+    <article className={`group flex flex-col ${className}`}>
+      <div className="relative overflow-hidden rounded-xl bg-tertiary-100 ring-1 ring-black/[0.04]">
+        <Link
+          to={href}
+          className="block aspect-[4/5] overflow-hidden bg-tertiary-200"
+        >
           {image ? (
             <OptimizedImage
+              key={active?.key || image}
               src={image}
-              alt={product.name_ar}
+              alt={
+                active?.color_name
+                  ? `${product.name_ar} — ${active.color_name}`
+                  : product.name_ar
+              }
               className="h-full w-full"
-              imgClassName="transition-transform duration-500 group-hover:scale-[1.03]"
+              imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
               widths={[400, 800]}
+              preferSrcWidth={400}
+              priority={priority}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-ink-300 text-sm">
@@ -104,7 +161,6 @@ export function StoreProductCard({
           )}
         </Link>
 
-        {/* Favorite — top-left (design) */}
         <button
           type="button"
           onClick={(e) => {
@@ -123,20 +179,71 @@ export function StoreProductCard({
           />
         </button>
 
-        {/* Status badge — bottom-right */}
-        {label && !outOfStock && (
-          <span className="absolute bottom-2.5 right-2.5 z-10 rounded-md bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink-800 shadow-sm ring-1 ring-black/5">
-            {label}
-          </span>
-        )}
-        {outOfStock && (
-          <span className="absolute bottom-2.5 right-2.5 z-10 rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
-            غير متوفر
-          </span>
-        )}
+        <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
+          {outOfStock ? (
+            <span className="rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
+              غير متوفر
+            </span>
+          ) : label ? (
+            <span className="rounded-md bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink-800 shadow-sm ring-1 ring-black/5">
+              {label}
+            </span>
+          ) : null}
+        </div>
       </div>
 
-      <Link to={href} className="mt-3 block px-0.5 text-start">
+      {showThumbs && (
+        <div
+          className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none"
+          role="listbox"
+          aria-label="صور المتغيرات"
+        >
+          {thumbs.map((item) => {
+            const selected = item.key === (active?.key || gallery[0]?.key);
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                title={item.color_name || 'صورة المنتج'}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveKey(item.key);
+                }}
+                onMouseEnter={() => {
+                  // Desktop: preview without blocking scroll jank
+                  if (window.matchMedia('(hover: hover)').matches) {
+                    setActiveKey(item.key);
+                  }
+                }}
+                className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded-md transition ${
+                  selected
+                    ? 'ring-2 ring-primary-600 ring-offset-1'
+                    : 'ring-1 ring-ink-100 opacity-85 hover:opacity-100'
+                }`}
+              >
+                <OptimizedThumb
+                  src={item.image}
+                  alt={item.color_name || ''}
+                  className="h-full w-full"
+                  imgClassName="object-cover"
+                />
+                {item.hex_code && (
+                  <span
+                    className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full border border-white shadow-sm"
+                    style={{ backgroundColor: item.hex_code }}
+                    aria-hidden
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <Link to={href} className="mt-2.5 block px-0.5 text-start flex-1">
         <h3 className="font-display text-[15px] sm:text-base font-bold text-ink-800 leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
           {product.name_ar}
         </h3>
@@ -157,7 +264,6 @@ export function StoreProductCard({
 
 /**
  * Shared section shell: title + «عرض الكل» + product grid.
- * Same pattern for: عروض مميزة · وصل حديثاً · الأكثر مبيعاً
  */
 export function StoreProductSection({
   title,
@@ -166,6 +272,8 @@ export function StoreProductSection({
   products = [],
   badge,
   showNewBadge = false,
+  showVariantImages = true,
+  priorityFirst = false,
   className = '',
   limit,
 }) {
@@ -189,12 +297,14 @@ export function StoreProductSection({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-4 sm:gap-y-8">
-        {list.map((p) => (
+        {list.map((p, i) => (
           <StoreProductCard
             key={p.id}
             product={p}
             badge={badge}
             showNewBadge={showNewBadge}
+            showVariantImages={showVariantImages}
+            priority={priorityFirst && i === 0}
           />
         ))}
       </div>
