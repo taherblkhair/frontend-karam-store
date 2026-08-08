@@ -21,24 +21,22 @@ api.interceptors.response.use(
   (response) => {
     const data = response.data;
 
-    // Production misconfig (Passenger default page, HTML, plain text, etc.)
+    // SPA HTML, Passenger error page, plain text, etc.
     if (typeof data === 'string' || data == null || typeof data !== 'object') {
       return Promise.reject(
         createApiError({
           message:
-            'الخادم لا يُرجع استجابة API صحيحة. تأكد من تشغيل تطبيق Express (وليس صفحة Passenger الافتراضية).',
+            'الخادم لا يُرجع استجابة API صحيحة. تأكد من أن الطلبات تذهب إلى https://api.karamstore.ly',
           code: 'INVALID_API_RESPONSE',
           statusCode: response.status || 502,
         })
       );
     }
 
-    // Expected envelope: { success, message, data }
     if (typeof data.success !== 'boolean') {
       return Promise.reject(
         createApiError({
-          message:
-            'صيغة استجابة الـ API غير متوقعة. تحقق من أن api.karamstore.ly يشغّل مشروع الـ Backend.',
+          message: 'صيغة استجابة الـ API غير متوقعة',
           code: 'INVALID_API_RESPONSE',
           statusCode: response.status || 502,
         })
@@ -82,11 +80,11 @@ api.interceptors.response.use(
       );
     }
 
-    if (looksLikeDefaultHostPage || typeof payload === 'string') {
+    if (typeof payload === 'string') {
       return Promise.reject(
         createApiError({
           message:
-            'الخادم لا يشغّل الـ API (تم استلام صفحة افتراضية بدل JSON). راجع إعدادات الاستضافة / Passenger.',
+            'الخادم لا يشغّل الـ API على هذا المسار. استخدم https://api.karamstore.ly',
           code: 'INVALID_API_RESPONSE',
           statusCode: statusCode || 502,
         })

@@ -1,0 +1,31 @@
+# Karam Store — Apache / cPanel (SPA + social link previews)
+#
+# Humans: product URLs fall through to index.html (React router).
+# Crawlers (Instagram, WhatsApp, Facebook, …): proxy HTML with Open Graph
+# via share-product.php → API /share/product/:slug
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Do not rewrite real files / directories (assets, favicon, php, …)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Social / preview bots → dynamic OG document for /product/:slug
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|FacebookBot|Instagram|WhatsApp|Twitterbot|LinkedInBot|Slackbot|Discordbot|TelegramBot|SkypeUriPreview|Applebot|Pinterest|Embedly|redditbot|Quora\ Link\ Preview|Googlebot|bingbot|DuckDuckBot|Baiduspider|YandexBot|Slurp|ia_archiver|Yahoo|MetaInspector|preview|bot|crawler|spider|Embed) [NC]
+  RewriteRule ^product/(.+)$ share-product.php?slug=$1 [L,QSA,B]
+
+  # SPA client-side routes
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# MIME types for modern assets (harmless if already set)
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+  AddType image/avif .avif
+</IfModule>

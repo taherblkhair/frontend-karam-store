@@ -8,6 +8,7 @@ import { useConfirm } from '@shared/hooks/useConfirm';
 import { inventoryApi } from '@modules/inventory/api/inventory.api';
 import { LoadingSpinner, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const STATUS = {
   draft: { label: 'مسودة', className: 'bg-yellow-100 text-yellow-800' },
@@ -84,8 +85,8 @@ function StocktakingList() {
         <EmptyState message="لا توجد جلسات جرد بعد" />
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <TableScroll>
+            <table className="admin-table">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="text-right p-4">الرقم</th>
@@ -118,7 +119,7 @@ function StocktakingList() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
           <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
         </>
       )}
@@ -365,7 +366,7 @@ function StocktakingDetail() {
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto max-h-[28rem]">
-          <table className="w-full text-sm">
+          <table className="admin-table">
             <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
               <tr>
                 <th className="text-right p-3">الصنف</th>

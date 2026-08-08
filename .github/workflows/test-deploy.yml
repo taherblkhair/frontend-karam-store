@@ -9,6 +9,11 @@ jobs:
   build-and-deploy-test:
     runs-on: ubuntu-latest
 
+    # Baked into JS at build time — browser calls this API directly
+    env:
+      VITE_API_BASE_URL: https://api.karamstore.ly
+      VITE_MEDIA_BASE_URL: https://api.karamstore.ly
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,8 +30,18 @@ jobs:
       - name: Run Linter (ESLint)
         run: npm run lint --if-present
 
-      - name: Build Project for Test
-        run: npm run build
+      - name: Build for Test
+        run: |
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL"
+          npm run build
+
+      - name: Verify API URL baked into bundle
+        run: |
+          if ! grep -R -q "api.karamstore.ly" dist/assets/; then
+            echo "ERROR: api.karamstore.ly missing from bundle — login will break"
+            exit 1
+          fi
+          echo "OK: API host found in dist"
 
       - name: Deploy to cPanel Test
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

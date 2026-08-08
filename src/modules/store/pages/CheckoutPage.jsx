@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
@@ -14,11 +14,27 @@ import {
   normalizeLibyaPhone,
   LIBYA_PHONE_MESSAGE,
 } from '@shared/utils/phone';
+import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
 
 export default function CheckoutPage() {
-  const { items, subtotal, clearCart } = useCart();
+  const { items: cartItems, clearCart } = useCart();
   const { user, register, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isBuyNow = searchParams.get('mode') === 'buy-now';
+
+  const [buyNowItems, setBuyNowItemsState] = useState(() => getBuyNowItems());
+
+  // Re-read session items when landing in buy-now mode
+  useEffect(() => {
+    if (isBuyNow) setBuyNowItemsState(getBuyNowItems());
+  }, [isBuyNow]);
+
+  const items = isBuyNow ? buyNowItems : cartItems;
+  const subtotal = useMemo(
+    () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    [items]
+  );
   const [createAccount, setCreateAccount] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const { formError, clearErrors, applyApiError, getFieldError } = useFormErrors();
@@ -96,7 +112,12 @@ export default function CheckoutPage() {
   const orderMutation = useMutation({
     mutationFn: storeApi.createOrder,
     onSuccess: (res) => {
-      clearCart();
+      if (isBuyNow) {
+        clearBuyNowItems();
+        setBuyNowItemsState([]);
+      } else {
+        clearCart();
+      }
       setOrderSuccess({ ...res.data, message: res.message });
       notifySuccess(res);
       if (user?.role === 'customer') {
@@ -112,7 +133,11 @@ export default function CheckoutPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearErrors();
-    if (items.length === 0) return notifyError({ message: 'السلة فارغة' });
+    if (items.length === 0) {
+      return notifyError({
+        message: isBuyNow ? 'لا يوجد منتج للطلب. عد إلى صفحة المنتج.' : 'السلة فارغة',
+      });
+    }
 
     const customerPhone = normalizeLibyaPhone(form.customer_phone);
     if (!isValidLibyaMobile(customerPhone)) {
@@ -154,7 +179,7 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0 && !orderSuccess) {
-    navigate('/cart');
+    navigate(isBuyNow ? '/' : '/cart');
     return null;
   }
 
@@ -179,7 +204,7 @@ export default function CheckoutPage() {
             >
               التواصل مع المتجر عبر WhatsApp
             </a>
-            <button onClick={() => navigate('/')} className="btn-outline">
+            <button type="button" onClick={() => navigate('/')} className="btn-outline">
               العودة للرئيسية
             </button>
           </div>
@@ -194,7 +219,14 @@ export default function CheckoutPage() {
   return (
     <StoreLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-2xl font-bold mb-6">إتمام الطلب</h1>
+        <h1 className="text-2xl font-bold mb-6">
+          {isBuyNow ? 'اطلب الآن' : 'إتمام الطلب'}
+        </h1>
+        {isBuyNow && (
+          <p className="text-sm text-ink-500 mb-4 -mt-3">
+            طلب مباشر للمنتج المختار — سلتك الحالية لم تُمس.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
           {formError ? (

@@ -80,6 +80,16 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
     onError: notifyError,
   });
 
+  const syncSabil = useMutation({
+    mutationFn: (payload = {}) => ordersApi.syncSabil(selectedId, payload),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(res);
+      onLabelSuccess?.(res);
+    },
+    onError: notifyError,
+  });
+
   const removeOrder = useMutation({
     mutationFn: ordersApi.remove,
     onSuccess: (res) => {
@@ -94,6 +104,7 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
     updateOrder,
     updateShippingLabel,
     generateShippingLabel,
+    syncSabil,
     removeOrder,
   };
 }

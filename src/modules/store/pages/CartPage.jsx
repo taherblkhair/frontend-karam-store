@@ -5,6 +5,7 @@ import StoreLayout from '@shared/layouts/StoreLayout';
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
 import { EmptyState } from '@shared/ui';
+import { OptimizedThumb } from '@shared/components/OptimizedImage';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
@@ -21,9 +22,9 @@ export default function CartPage() {
             <div className="lg:col-span-2 space-y-4">
               {items.map((item) => (
                 <div key={item.key} className="card p-4 flex gap-4">
-                  <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="w-24 h-24 bg-tertiary-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
                     {item.image ? (
-                      <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
+                      <OptimizedThumb src={item.image} alt={item.name} className="w-full h-full" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">لا صورة</div>
                     )}
@@ -38,7 +39,13 @@ export default function CartPage() {
                         <span className="px-3">{item.quantity}</span>
                         <button onClick={() => updateQuantity(item.key, Math.min(item.stock, item.quantity + 1))} className="p-2"><Plus size={16} /></button>
                       </div>
-                      <span className="text-xs text-gray-500">متوفر: {item.stock}</span>
+                      <span className="text-xs font-medium">
+                        {item.stock > 0 ? (
+                          <span className="text-green-600">متوفر</span>
+                        ) : (
+                          <span className="text-red-600">غير متوفر</span>
+                        )}
+                      </span>
                       <button onClick={() => removeItem(item.key)} className="text-red-500 p-2 hover:bg-red-50 rounded-lg">
                         <Trash2 size={18} />
                       </button>

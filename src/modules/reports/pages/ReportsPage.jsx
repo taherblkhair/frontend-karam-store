@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { reportsApi } from '@modules/reports/api/reports.api';
 import { LoadingSpinner } from '@shared/ui';
 import { formatPrice } from '@core/constants';
+import { TableScroll } from '@shared/components/TableScroll';
 
 export default function ReportsPage() {
   const { data: sales, isLoading: salesLoading } = useQuery({
@@ -49,7 +50,7 @@ export default function ReportsPage() {
         <div className="card p-6">
           <h2 className="font-bold mb-4">تقرير المنتجات</h2>
           <div className="overflow-x-auto max-h-96">
-            <table className="w-full text-sm">
+            <table className="admin-table">
               <thead>
                 <tr className="border-b dark:border-gray-700">
                   <th className="text-right py-2">المنتج</th>
@@ -73,7 +74,7 @@ export default function ReportsPage() {
         <div className="card p-6">
           <h2 className="font-bold mb-4">تقرير المخزون</h2>
           <div className="overflow-x-auto max-h-96">
-            <table className="w-full text-sm">
+            <table className="admin-table">
               <thead>
                 <tr className="border-b dark:border-gray-700">
                   <th className="text-right py-2">المنتج</th>

@@ -4,7 +4,8 @@ import { endpoints } from '@core/api/endpoints';
 export const storeApi = {
   home: () => api.get(endpoints.store.home),
   products: (params) => api.get(endpoints.store.products, { params }),
-  productBySlug: (slug) => api.get(`${endpoints.store.products}/slug/${slug}`),
+  productBySlug: (slug) =>
+    api.get(`${endpoints.store.products}/slug/${encodeURIComponent(String(slug || '').trim())}`),
   categories: () => api.get(endpoints.store.categories),
   colors: () => api.get(endpoints.store.colors),
   sizes: () => api.get(endpoints.store.sizes),

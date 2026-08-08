@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
+import { OptimizedThumb } from '@shared/components/OptimizedImage';
 import { uploadFile } from '@shared/services/upload.service';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { resolveMediaUrl } from '@core/api/config.js';
@@ -51,8 +52,8 @@ export function ImageUpload({ value, onChange, label = 'رفع صورة', multip
         <div className="flex flex-wrap gap-3">
           {images.map((url, i) => (
             <div key={`${url}-${i}`} className="relative w-24 h-24 rounded-lg overflow-hidden border">
-              <img src={resolveMediaUrl(url)} alt="" className="w-full h-full object-cover" />
-              <button type="button" onClick={() => removeImage(i)} className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1">
+              <OptimizedThumb src={url} alt="" className="w-full h-full" />
+              <button type="button" onClick={() => removeImage(i)} className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1 z-10">
                 <X size={12} />
               </button>
             </div>
@@ -77,8 +78,8 @@ export function ImageUpload({ value, onChange, label = 'رفع صورة', multip
       <label className="block text-sm font-medium mb-2">{label}</label>
       {value ? (
         <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
-          <img src={resolveMediaUrl(value)} alt="" className="w-full h-full object-cover" />
-          <button type="button" onClick={() => onChange('')} className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1">
+          <OptimizedThumb src={value} alt="" className="w-full h-full" />
+          <button type="button" onClick={() => onChange('')} className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1 z-10">
             <X size={12} />
           </button>
         </div>
@@ -103,5 +104,5 @@ export function ImagePreview({ url, size = 'sm' }) {
   if (!url) {
     return <div className={`${sizes[size]} bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 text-xs`}>—</div>;
   }
-  return <img src={resolveMediaUrl(url)} alt="" className={`${sizes[size]} object-cover rounded-lg`} />;
+  return <OptimizedThumb src={url} alt="" className={`${sizes[size]} rounded-lg`} />;
 }

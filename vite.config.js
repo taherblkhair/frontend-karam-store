@@ -10,12 +10,12 @@ export default defineConfig(({ mode }) => {
   const directApi = (env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
   const proxyTarget = (
     env.VITE_API_PROXY_TARGET ||
-    env.VITE_API_BASE_URL ||
-    `http://localhost:${env.VITE_API_PORT || '3000'}`
+    (env.VITE_API_PORT ? `http://localhost:${env.VITE_API_PORT}` : '') ||
+    'https://api.karamstore.ly'
   ).replace(/\/+$/, '');
 
-  // When VITE_API_BASE_URL is set, browser talks to API directly (needs CORS).
-  // When empty, Vite proxies /api and /uploads → proxyTarget (recommended for localhost).
+  // Empty VITE_API_BASE_URL = browser → /api → Vite proxy → proxyTarget
+  // Set VITE_API_BASE_URL for production builds / direct browser→API
   const useProxy = !directApi;
 
   return {

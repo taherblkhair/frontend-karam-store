@@ -9,6 +9,7 @@ import { useAuth } from '@core/auth/AuthContext';
 import { usersApi } from '@modules/users/api/users.api';
 import { LoadingSpinner, Modal, FieldError, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
+import { TableScroll } from '@shared/components/TableScroll';
 
 const emptyForm = {
   name: '',
@@ -132,8 +133,8 @@ export default function UsersPage() {
         <EmptyState message="لا يوجد مستخدمون" />
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <TableScroll>
+            <table className="admin-table">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="text-right p-4">الاسم</th>
@@ -209,7 +210,7 @@ export default function UsersPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
           <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
         </>
       )}

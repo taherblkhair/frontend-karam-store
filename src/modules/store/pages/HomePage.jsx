@@ -2,8 +2,34 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
-import { ProductCard, LoadingSpinner } from '@shared/ui';
+import { LoadingSpinner } from '@shared/ui';
 import { CategoryCard } from '@modules/store/components/CategoryCard';
+import { BannerCarousel } from '@modules/store/components/BannerCarousel';
+import { StoreProductSection } from '@modules/store/components/StoreProductCard';
+
+function CategoriesSection({ categories }) {
+  if (!categories?.length) return null;
+  return (
+    <section className="container mx-auto px-4 py-10 sm:py-12">
+      <div className="mb-5 sm:mb-6 flex items-center justify-between gap-3">
+        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
+          التصنيفات
+        </h2>
+        <Link
+          to="/products"
+          className="shrink-0 text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
+        >
+          عرض الكل
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        {categories.map((cat) => (
+          <CategoryCard key={cat.id} category={cat} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function HomePage() {
   const { data, isLoading } = useQuery({
@@ -15,80 +41,35 @@ export default function HomePage() {
 
   return (
     <StoreLayout>
-      {/* Hero Banners */}
-      <section className="relative">
-        {home?.banners?.length > 0 ? (
-          <div className="relative h-64 md:h-96 bg-gradient-to-l from-primary-600 to-primary-800 overflow-hidden">
-            <div className="absolute inset-0 flex items-center">
-              <div className="container mx-auto px-4 text-white">
-                <h1 className="text-3xl md:text-5xl font-bold mb-4">{home.banners[0].title_ar}</h1>
-                <p className="text-lg md:text-xl opacity-90 mb-6">{home.banners[0].subtitle_ar}</p>
-                <Link to="/products" className="btn bg-white text-primary-700 hover:bg-gray-100">
-                  تسوق الآن
-                </Link>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="h-64 md:h-96 bg-gradient-to-l from-primary-600 to-primary-800 flex items-center">
-            <div className="container mx-auto px-4 text-white">
-              <h1 className="text-3xl md:text-5xl font-bold mb-4">متجر كرم افضل متجر حقائب في عالم</h1>
-              <p className="text-lg opacity-90 mb-6">أفضل المنتجات بأسعار منافسة - الدفع عند الاستلام</p>
-              <Link to="/products" className="btn bg-white text-primary-700">تسوق الآن</Link>
-            </div>
-          </div>
-        )}
-      </section>
+      <BannerCarousel banners={home?.banners || []} />
 
-      {isLoading ? <LoadingSpinner /> : (
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
         <>
-          {/* Categories */}
-          {home?.categories?.length > 0 && (
-            <section className="container mx-auto px-4 py-12">
-              <h2 className="text-2xl font-bold mb-6">التصنيفات</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {home.categories.map((cat) => (
-                  <CategoryCard key={cat.id} category={cat} />
-                ))}
-              </div>
-            </section>
-          )}
+          <CategoriesSection categories={home?.categories} />
 
-          {/* New Products */}
-          {home?.newProducts?.length > 0 && (
-            <section className="container mx-auto px-4 py-12">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">وصل حديثاً</h2>
-                <Link to="/products?is_new=true" className="text-primary-600 hover:underline">عرض الكل</Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {home.newProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-              </div>
-            </section>
-          )}
+          {/* One design pattern for all product shelves */}
+          <StoreProductSection
+            title="عروض مميزة"
+            to="/products?featured=true"
+            products={home?.featuredProducts || []}
+            badge="مميز"
+          />
 
-          {/* Top Selling */}
-          {home?.topSelling?.length > 0 && (
-            <section className="container mx-auto px-4 py-12">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">الأكثر مبيعاً</h2>
-                <Link to="/products" className="text-primary-600 hover:underline">عرض الكل</Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {home.topSelling.map((p) => <ProductCard key={p.id} product={p} />)}
-              </div>
-            </section>
-          )}
+          <StoreProductSection
+            title="وصل حديثاً"
+            to="/products?is_new=true"
+            products={home?.newProducts || []}
+            showNewBadge
+          />
 
-          {/* Featured */}
-          {home?.featuredProducts?.length > 0 && (
-            <section className="container mx-auto px-4 py-12 bg-primary-50 dark:bg-primary-900/20 rounded-2xl mb-12">
-              <h2 className="text-2xl font-bold mb-6 px-4">عروض مميزة</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 px-4">
-                {home.featuredProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-              </div>
-            </section>
-          )}
+          <StoreProductSection
+            title="الأكثر مبيعاً"
+            to="/products"
+            products={home?.topSelling || []}
+            badge="رائج"
+          />
         </>
       )}
     </StoreLayout>

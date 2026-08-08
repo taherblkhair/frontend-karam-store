@@ -1,8 +1,11 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Moon, Sun, Home, Package, UserRound } from 'lucide-react';
 import { useCart } from '@modules/store/context/CartContext';
 import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
+import { storeApi } from '@modules/store/api/store.api';
+import { SocialMediaLinks } from '@modules/store/components/SocialMediaLinks';
 
 const mobileNavClass = ({ isActive }) =>
   `flex flex-col items-center justify-center gap-0.5 flex-1 h-full min-w-0 transition ${
@@ -16,6 +19,16 @@ export default function StoreLayout({ children }) {
   const { dark, toggle } = useTheme();
   const { user } = useAuth();
   const location = useLocation();
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => storeApi.settings(),
+    staleTime: 60_000,
+  });
+  const settings = settingsData?.data || {};
+  const storeName = settings.store_name || 'متجر كرم';
+  const storePhone = settings.store_phone || '';
+  const storeEmail = settings.store_email || '';
 
   const accountTo = user
     ? user.role === 'customer'
@@ -37,11 +50,11 @@ export default function StoreLayout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b dark:bg-gray-900/95 dark:border-gray-700">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-ink-100 dark:bg-gray-900/95 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
-            <Link to="/" className="text-xl md:text-2xl font-bold text-primary-600">
-              متجر كرم
+            <Link to="/" className="text-xl md:text-2xl font-display font-bold text-primary-600">
+              {storeName}
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">
@@ -66,7 +79,6 @@ export default function StoreLayout({ children }) {
                 {dark ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              {/* Cart stays in header on desktop; mobile uses bottom nav */}
               <Link
                 to="/cart"
                 className="relative hidden md:inline-flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -106,11 +118,12 @@ export default function StoreLayout({ children }) {
 
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-      <footer className="hidden md:block bg-gray-900 text-gray-300 py-12 mt-auto">
+      <footer className="hidden md:block bg-ink-800 text-gray-300 py-12 mt-auto">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-white text-lg font-bold mb-4">متجر كرم</h3>
+            <h3 className="text-white text-lg font-display font-bold mb-4">{storeName}</h3>
             <p className="text-sm">متجر إلكتروني ليبي - الدفع عند الاستلام</p>
+            <SocialMediaLinks className="mt-4" settings={settings} />
           </div>
           <div>
             <h4 className="text-white font-medium mb-3">روابط سريعة</h4>
@@ -125,18 +138,17 @@ export default function StoreLayout({ children }) {
           </div>
           <div>
             <h4 className="text-white font-medium mb-3">تواصل معنا</h4>
-            <p className="text-sm">0910000000</p>
-            <p className="text-sm">info@karamstore.ly</p>
+            {storePhone ? <p className="text-sm" dir="ltr">{storePhone}</p> : null}
+            {storeEmail ? <p className="text-sm" dir="ltr">{storeEmail}</p> : null}
           </div>
         </div>
-        <div className="container mx-auto px-4 mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-          © 2026 متجر كرم - جميع الحقوق محفوظة
+        <div className="container mx-auto px-4 mt-8 pt-8 border-t border-ink-700 text-center text-sm">
+          © {new Date().getFullYear()} {storeName} - جميع الحقوق محفوظة
         </div>
       </footer>
 
-      {/* Mobile bottom navigation */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-ink-100 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
         aria-label="التنقل الرئيسي"
       >
         <div className="flex items-stretch h-16">

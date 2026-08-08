@@ -2,8 +2,8 @@ import { Search, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export function SearchInput({ value, onChange, placeholder = 'بحث...', className = '' }) {
   return (
-    <div className={`relative flex-1 sm:w-56 min-w-[180px] ${className}`}>
-      <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+    <div className={`relative w-full sm:flex-1 sm:w-56 sm:min-w-[180px] ${className}`}>
+      <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
       <input
         className="input pr-9"
         placeholder={placeholder}
