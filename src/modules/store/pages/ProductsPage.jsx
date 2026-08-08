@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, X } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  X,
+  Filter,
+  Check,
+  LayoutGrid,
+} from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
-import { CategoryCard } from '@modules/store/components/CategoryCard';
 
 const FILTERS_STORAGE_KEY = 'store-filters-open';
 
@@ -25,6 +30,111 @@ const SORT_LABELS = [
   { value: 'price_desc', label: 'السعر: من الأعلى للأقل' },
   { value: 'name', label: 'الاسم' },
 ];
+
+/**
+ * Category strip as filter navigation (not product cards).
+ * Chip-style controls that filter products below.
+ */
+function CategoryFilterBar({ categories, activeId, onSelect }) {
+  if (!categories?.length) return null;
+
+  const active = categories.find((c) => String(c.id) === String(activeId));
+  const isAll = !activeId;
+
+  return (
+    <section
+      className="mb-6 rounded-2xl border border-primary-600/15 bg-white dark:bg-ink-900 dark:border-primary-600/25 shadow-sm overflow-hidden"
+      aria-label="تصفية حسب التصنيف"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-primary-600/10 bg-primary-50/80 dark:bg-primary-900/25 px-3.5 sm:px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-primary-700 dark:text-primary-200">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white shadow-sm">
+              <Filter size={16} strokeWidth={2.25} aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold leading-tight text-ink-800 dark:text-white">
+                تصفية حسب التصنيف
+              </h2>
+              <p className="mt-0.5 text-[11px] sm:text-xs text-ink-500 dark:text-gray-400">
+                اختر تصنيفاً لعرض منتجاته في القائمة أدناه
+              </p>
+            </div>
+          </div>
+        </div>
+        {active && (
+          <button
+            type="button"
+            onClick={() => onSelect('')}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary-600/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 shadow-sm transition hover:bg-primary-50 dark:bg-ink-800 dark:text-primary-200 dark:border-primary-600/30 dark:hover:bg-ink-700"
+          >
+            <X size={14} aria-hidden />
+            إلغاء التصنيف
+          </button>
+        )}
+      </div>
+
+      <div
+        className="flex gap-2 overflow-x-auto overscroll-x-contain px-3.5 sm:px-4 py-3.5 snap-x snap-mandatory scrollbar-thin"
+        role="listbox"
+        aria-label="قائمة التصنيفات"
+        aria-orientation="horizontal"
+      >
+        <button
+          type="button"
+          role="option"
+          aria-selected={isAll}
+          onClick={() => onSelect('')}
+          className={`snap-start shrink-0 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition duration-200 border ${
+            isAll
+              ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
+              : 'border-ink-100 bg-tertiary-100 text-ink-600 hover:border-primary-600/35 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-600 dark:bg-ink-800 dark:text-gray-200 dark:hover:border-primary-500/40'
+          }`}
+        >
+          <LayoutGrid size={15} strokeWidth={2.25} aria-hidden />
+          الكل
+          {isAll && <Check size={14} strokeWidth={2.5} className="opacity-90" aria-hidden />}
+        </button>
+
+        {categories.map((cat) => {
+          const selected = String(activeId) === String(cat.id);
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              onClick={() => onSelect(selected ? '' : String(cat.id))}
+              className={`snap-start shrink-0 inline-flex max-w-[14rem] items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition duration-200 border ${
+                selected
+                  ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
+                  : 'border-ink-100 bg-tertiary-100 text-ink-600 hover:border-primary-600/35 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-600 dark:bg-ink-800 dark:text-gray-200 dark:hover:border-primary-500/40'
+              }`}
+            >
+              <span className="truncate">{cat.name_ar}</span>
+              {selected && (
+                <Check size={14} strokeWidth={2.5} className="shrink-0 opacity-90" aria-hidden />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {active && (
+        <div className="flex items-center gap-2 border-t border-primary-600/10 bg-secondary-50/80 dark:bg-secondary-900/10 px-3.5 sm:px-4 py-2 text-xs sm:text-sm text-ink-700 dark:text-gray-200">
+          <Filter size={14} className="shrink-0 text-primary-600" aria-hidden />
+          <span>
+            يتم عرض منتجات:
+            <strong className="mx-1 font-bold text-primary-700 dark:text-primary-300">
+              {active.name_ar}
+            </strong>
+            فقط
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function FilterFields({
   filters,
@@ -269,6 +379,18 @@ export default function ProductsPage() {
   const products = productsData?.data || [];
   const pagination = productsData?.pagination;
   const categories = categoriesData?.data || [];
+  const activeCategory = categories.find(
+    (c) => String(c.id) === String(filters.category)
+  );
+
+  const pageHeading =
+    filters.featured === 'true'
+      ? 'عروض مميزة'
+      : filters.is_new === 'true'
+        ? 'وصل حديثاً'
+        : activeCategory
+          ? activeCategory.name_ar
+          : 'المنتجات';
 
   const filterProps = {
     filters,
@@ -281,17 +403,21 @@ export default function ProductsPage() {
   return (
     <StoreLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
             <h1 className="text-2xl sm:text-3xl text-primary-600">
-              {filters.featured === 'true'
-                ? 'عروض مميزة'
-                : filters.is_new === 'true'
-                  ? 'وصل حديثاً'
-                  : 'المنتجات'}
+              {pageHeading}
             </h1>
             {pagination?.total != null && (
-              <p className="text-sm text-ink-400 mt-1">{pagination.total} منتج</p>
+              <p className="text-sm text-ink-400 mt-1">
+                {pagination.total} منتج
+                {activeCategory ? (
+                  <span className="text-ink-500">
+                    {' '}
+                    · مفلتر حسب «{activeCategory.name_ar}»
+                  </span>
+                ) : null}
+              </p>
             )}
           </div>
 
@@ -325,20 +451,23 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {categories.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-lg mb-3">التصنيفات</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {categories.map((cat) => (
-                <CategoryCard
-                  key={cat.id}
-                  category={cat}
-                  active={String(filters.category) === String(cat.id)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Category filter — visually separate from product grid */}
+        <CategoryFilterBar
+          categories={categories}
+          activeId={filters.category}
+          onSelect={(id) => updateFilter('category', id)}
+        />
+
+        {/* Products region */}
+        <div className="mb-3 flex items-center gap-2 border-t border-ink-100 pt-5 dark:border-gray-700">
+          <LayoutGrid size={16} className="text-ink-400 shrink-0" aria-hidden />
+          <h2 className="text-sm font-bold text-ink-700 dark:text-gray-200">
+            المنتجات
+            {activeCategory ? (
+              <span className="font-medium text-ink-400"> · {activeCategory.name_ar}</span>
+            ) : null}
+          </h2>
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {filtersOpen && (
