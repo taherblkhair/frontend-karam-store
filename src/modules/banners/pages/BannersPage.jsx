@@ -10,7 +10,6 @@ import { bannersApi } from '@modules/banners/api/banners.api';
 import { LoadingSpinner, Modal, FieldError, EmptyState } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
 import { ImageUpload } from '@shared/components/ImageUpload';
-import { resolveMediaUrl } from '@core/api/config.js';
 
 const emptyBanner = {
   title_ar: '',
