@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, X } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  X,
+  Filter,
+  Check,
+  LayoutGrid,
+} from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
-import { CategoryCard } from '@modules/store/components/CategoryCard';
 
 const FILTERS_STORAGE_KEY = 'store-filters-open';
 
@@ -25,6 +30,19 @@ const SORT_LABELS = [
   { value: 'price_desc', label: 'السعر: من الأعلى للأقل' },
   { value: 'name', label: 'الاسم' },
 ];
+
+/**
+ * Category strip as filter navigation (not product cards).
+ * Chip-style controls that filter products below.
+ */
+function CategoryFilterBar({ categories, activeId, onSelect }) {
+  if (!categories?.length) return null;
+
+  const active = categories.find((c) => String(c.id) === String(activeId));
+  const isAll = !activeId;
+
+
+}
 
 function FilterFields({
   filters,
@@ -269,6 +287,18 @@ export default function ProductsPage() {
   const products = productsData?.data || [];
   const pagination = productsData?.pagination;
   const categories = categoriesData?.data || [];
+  const activeCategory = categories.find(
+    (c) => String(c.id) === String(filters.category)
+  );
+
+  const pageHeading =
+    filters.featured === 'true'
+      ? 'عروض مميزة'
+      : filters.is_new === 'true'
+        ? 'وصل حديثاً'
+        : activeCategory
+          ? activeCategory.name_ar
+          : 'المنتجات';
 
   const filterProps = {
     filters,
@@ -281,17 +311,21 @@ export default function ProductsPage() {
   return (
     <StoreLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
             <h1 className="text-2xl sm:text-3xl text-primary-600">
-              {filters.featured === 'true'
-                ? 'عروض مميزة'
-                : filters.is_new === 'true'
-                  ? 'وصل حديثاً'
-                  : 'المنتجات'}
+              {pageHeading}
             </h1>
             {pagination?.total != null && (
-              <p className="text-sm text-ink-400 mt-1">{pagination.total} منتج</p>
+              <p className="text-sm text-ink-400 mt-1">
+                {pagination.total} منتج
+                {activeCategory ? (
+                  <span className="text-ink-500">
+                    {' '}
+                    · مفلتر حسب «{activeCategory.name_ar}»
+                  </span>
+                ) : null}
+              </p>
             )}
           </div>
 
@@ -325,20 +359,23 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {categories.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-lg mb-3">التصنيفات</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {categories.map((cat) => (
-                <CategoryCard
-                  key={cat.id}
-                  category={cat}
-                  active={String(filters.category) === String(cat.id)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Category filter — visually separate from product grid */}
+        <CategoryFilterBar
+          categories={categories}
+          activeId={filters.category}
+          onSelect={(id) => updateFilter('category', id)}
+        />
+
+        {/* Products region */}
+        <div className="mb-3 flex items-center gap-2 border-t border-ink-100 pt-5 dark:border-gray-700">
+          <LayoutGrid size={16} className="text-ink-400 shrink-0" aria-hidden />
+          <h2 className="text-sm font-bold text-ink-700 dark:text-gray-200">
+            المنتجات
+            {activeCategory ? (
+              <span className="font-medium text-ink-400"> · {activeCategory.name_ar}</span>
+            ) : null}
+          </h2>
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {filtersOpen && (

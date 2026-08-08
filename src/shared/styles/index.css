@@ -98,4 +98,19 @@
   .safe-pt {
     padding-top: max(0px, env(safe-area-inset-top));
   }
+  /* Subtle horizontal scroller for category chips */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 77, 64, 0.25) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(0, 77, 64, 0.28);
+    border-radius: 999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
