@@ -7,6 +7,7 @@ import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner } from '@shared/ui';
 import { ProductImageGallery } from '@modules/store/components/ProductImageGallery';
+import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
 import { startBuyNow } from '@modules/store/utils/buyNow';
@@ -15,6 +16,57 @@ import {
   productAbsoluteUrl,
   productPath,
 } from '@modules/store/utils/productPaths';
+
+const PICKS_LIMIT = 8;
+
+/**
+ * Featured picks first; if few results, fill with same-category products.
+ * Always excludes the current product.
+ */
+async function fetchPicksForYou(product) {
+  const excludeId = String(product.id);
+  const seen = new Set([excludeId]);
+  const picks = [];
+
+  const pushAll = (list = []) => {
+    for (const p of list) {
+      if (!p?.id) continue;
+      const id = String(p.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      picks.push(p);
+      if (picks.length >= PICKS_LIMIT) break;
+    }
+  };
+
+  const featuredRes = await storeApi.products({
+    featured: 'true',
+    limit: PICKS_LIMIT + 4,
+    page: 1,
+  });
+  pushAll(featuredRes?.data || []);
+
+  if (picks.length < PICKS_LIMIT && product.category_id) {
+    const catRes = await storeApi.products({
+      category: product.category_id,
+      limit: PICKS_LIMIT + 4,
+      page: 1,
+    });
+    pushAll(catRes?.data || []);
+  }
+
+  if (picks.length < PICKS_LIMIT) {
+    const latestRes = await storeApi.products({
+      limit: PICKS_LIMIT + 4,
+      page: 1,
+      sortBy: 'created_at',
+      sortOrder: 'DESC',
+    });
+    pushAll(latestRes?.data || []);
+  }
+
+  return picks.slice(0, PICKS_LIMIT);
+}
 
 export default function ProductDetailPage() {
   const { slug: slugParam } = useParams();
@@ -32,6 +84,13 @@ export default function ProductDetailPage() {
   });
 
   const product = data?.data;
+
+  const { data: picks = [] } = useQuery({
+    queryKey: ['picks-for-you', product?.id, product?.category_id],
+    queryFn: () => fetchPicksForYou(product),
+    enabled: Boolean(product?.id),
+    staleTime: 60_000,
+  });
 
   // Canonical clean URL: /product/human-slug (rewrites old numeric ids)
   useEffect(() => {
@@ -322,6 +381,20 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {picks.length > 0 && (
+        <div className="border-t border-ink-100 dark:border-gray-800 bg-tertiary-100/60 dark:bg-ink-900/40">
+          <StoreProductSection
+            title="عروض اخترنا لك"
+            to="/products?featured=true"
+            linkLabel="عرض الكل"
+            products={picks}
+            badge="اخترنا لك"
+            limit={PICKS_LIMIT}
+            className="!py-10 sm:!py-12"
+          />
+        </div>
+      )}
     </StoreLayout>
   );
 }
