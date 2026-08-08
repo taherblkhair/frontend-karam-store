@@ -32,9 +32,12 @@ function CategoriesSection({ categories }) {
 }
 
 export default function HomePage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['store-home'],
     queryFn: () => storeApi.home(),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const home = data?.data;
@@ -43,18 +46,25 @@ export default function HomePage() {
     <StoreLayout>
       <BannerCarousel banners={home?.banners || []} />
 
-      {isLoading ? (
+      {isLoading && !home ? (
         <LoadingSpinner />
       ) : (
         <>
+          {isFetching && home ? (
+            <div className="h-0.5 w-full bg-primary-100 overflow-hidden" aria-hidden>
+              <div className="h-full w-1/3 bg-primary-600/40 animate-pulse" />
+            </div>
+          ) : null}
+
           <CategoriesSection categories={home?.categories} />
 
-          {/* One design pattern for all product shelves */}
           <StoreProductSection
             title="عروض مميزة"
             to="/products?featured=true"
             products={home?.featuredProducts || []}
             badge="مميز"
+            showVariantImages
+            priorityFirst
           />
 
           <StoreProductSection
@@ -62,6 +72,7 @@ export default function HomePage() {
             to="/products?is_new=true"
             products={home?.newProducts || []}
             showNewBadge
+            showVariantImages
           />
 
           <StoreProductSection
@@ -69,6 +80,7 @@ export default function HomePage() {
             to="/products"
             products={home?.topSelling || []}
             badge="رائج"
+            showVariantImages
           />
         </>
       )}
