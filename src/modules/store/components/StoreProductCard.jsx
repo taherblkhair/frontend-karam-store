@@ -131,7 +131,7 @@ export function StoreProductCard({
         )}
         {outOfStock && (
           <span className="absolute bottom-2.5 right-2.5 z-10 rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
-            نفذ
+            غير متوفر
           </span>
         )}
       </div>

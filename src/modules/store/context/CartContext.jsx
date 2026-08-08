@@ -50,7 +50,7 @@ export const CartProvider = ({ children }) => {
       }];
     });
 
-    return added ? { ok: true } : { ok: false, message: `الحد الأقصى للمخzون: ${stock}` };
+    return added ? { ok: true } : { ok: false, message: 'الكمية المطلوبة غير متاحة' };
   };
 
   const updateQuantity = (key, quantity) => {

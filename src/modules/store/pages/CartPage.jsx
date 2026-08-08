@@ -38,7 +38,13 @@ export default function CartPage() {
                         <span className="px-3">{item.quantity}</span>
                         <button onClick={() => updateQuantity(item.key, Math.min(item.stock, item.quantity + 1))} className="p-2"><Plus size={16} /></button>
                       </div>
-                      <span className="text-xs text-gray-500">متوفر: {item.stock}</span>
+                      <span className="text-xs font-medium">
+                        {item.stock > 0 ? (
+                          <span className="text-green-600">متوفر</span>
+                        ) : (
+                          <span className="text-red-600">غير متوفر</span>
+                        )}
+                      </span>
                       <button onClick={() => removeItem(item.key)} className="text-red-500 p-2 hover:bg-red-50 rounded-lg">
                         <Trash2 size={18} />
                       </button>

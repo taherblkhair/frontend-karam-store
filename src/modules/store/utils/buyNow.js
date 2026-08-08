@@ -53,7 +53,7 @@ export function startBuyNow(product, variant = null, quantity = 1) {
     return { ok: false, message: 'المنتج غير متوفر' };
   }
   if (quantity > stock) {
-    return { ok: false, message: `الحد الأقصى للمخزون: ${stock}` };
+    return { ok: false, message: `الكمية المطلوبة غير متاحة` };
   }
   setBuyNowItems([buildLineItem(product, variant, quantity)]);
   return { ok: true };

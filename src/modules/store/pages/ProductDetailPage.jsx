@@ -269,11 +269,11 @@ export default function ProductDetailPage() {
             )}
 
             <p className="text-sm mb-4">
-              المخزون:{' '}
+              الحالة:{' '}
               {currentStock > 0 ? (
-                <span className="text-green-600">{currentStock} متوفر</span>
+                <span className="text-green-600 font-medium">متوفر</span>
               ) : (
-                <span className="text-red-600">نفذ المخزون</span>
+                <span className="text-red-600 font-medium">غير متوفر</span>
               )}
             </p>
 
