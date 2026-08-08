@@ -1,29 +1,14 @@
+import { buildLineItem as buildFromVariant } from './lineItem.js';
+
 /** sessionStorage key for one-click “order now” checkout (does not touch main cart). */
 export const BUY_NOW_KEY = 'karam-buy-now';
 
 /**
  * Build a checkout line item from product + optional variant.
+ * Returns null if product has variants but none was selected.
  */
 export function buildLineItem(product, variant = null, quantity = 1) {
-  const stock = variant?.stock ?? product.total_stock ?? 0;
-  const qty = Math.max(1, Math.min(quantity, stock || quantity));
-  const key = variant ? `${product.id}-${variant.id}` : `${product.id}`;
-  const price = parseFloat(variant?.price || product.price);
-
-  return {
-    key,
-    product_id: product.id,
-    variant_id: variant?.id || null,
-    name: product.name_ar,
-    variant_info: variant
-      ? [variant.color_name, variant.size_name].filter(Boolean).join(' - ')
-      : null,
-    price,
-    compare_price: parseFloat(variant?.compare_price || product.compare_price || 0),
-    image: variant?.image || product.primary_image || product.images?.[0]?.url,
-    quantity: qty,
-    stock,
-  };
+  return buildFromVariant(product, variant, quantity);
 }
 
 export function setBuyNowItems(items) {
@@ -53,8 +38,15 @@ export function startBuyNow(product, variant = null, quantity = 1) {
     return { ok: false, message: 'المنتج غير متوفر' };
   }
   if (quantity > stock) {
-    return { ok: false, message: `الكمية المطلوبة غير متاحة` };
+    return { ok: false, message: 'الكمية المطلوبة غير متاحة' };
   }
-  setBuyNowItems([buildLineItem(product, variant, quantity)]);
+  const line = buildLineItem(product, variant, quantity);
+  if (!line) {
+    return { ok: false, message: 'يرجى اختيار اللون والمقاس' };
+  }
+  if (!line.variant_id && (product.has_variants || product.variants?.length)) {
+    return { ok: false, message: 'يرجى اختيار اللون والمقاس' };
+  }
+  setBuyNowItems([line]);
   return { ok: true };
 }

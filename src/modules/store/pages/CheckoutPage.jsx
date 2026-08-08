@@ -15,6 +15,8 @@ import {
   LIBYA_PHONE_MESSAGE,
 } from '@shared/utils/phone';
 import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
+import { toOrderItemPayload } from '@modules/store/utils/lineItem.js';
+import { OptimizedThumb } from '@shared/components/OptimizedImage';
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart } = useCart();
@@ -170,11 +172,7 @@ export default function CheckoutPage() {
       area_id: form.area_id ? parseInt(form.area_id, 10) : null,
       address: form.address,
       notes: form.notes,
-      items: items.map((i) => ({
-        product_id: i.product_id,
-        variant_id: i.variant_id,
-        quantity: i.quantity,
-      })),
+      items: items.map((i) => toOrderItemPayload(i)),
     });
   };
 
@@ -348,13 +346,34 @@ export default function CheckoutPage() {
           <div>
             <div className="card p-6 sticky top-24">
               <h2 className="font-bold mb-4">ملخص الطلب</h2>
-              <div className="space-y-2 mb-4 max-h-48 overflow-auto">
+              <div className="space-y-3 mb-4 max-h-72 overflow-auto">
                 {items.map((item) => (
-                  <div key={item.key} className="flex justify-between text-sm">
-                    <span>
-                      {item.name} × {item.quantity}
-                    </span>
-                    <span>{formatPrice(item.price * item.quantity)}</span>
+                  <div key={item.key} className="flex gap-3 text-sm border-b border-ink-100 pb-3 last:border-0 dark:border-gray-700">
+                    <div className="w-14 h-14 rounded-lg overflow-hidden bg-tertiary-100 shrink-0 dark:bg-gray-700">
+                      {item.image ? (
+                        <OptimizedThumb src={item.image} alt={item.name} className="w-full h-full" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-ink-300">—</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-ink-800 dark:text-gray-100 line-clamp-2">{item.name}</p>
+                      {(item.variant_info || item.color_name || item.size_name) && (
+                        <p className="mt-0.5 text-xs font-medium text-primary-600">
+                          {item.variant_info
+                            || [item.color_name && `اللون: ${item.color_name}`, item.size_name && `المقاس: ${item.size_name}`]
+                              .filter(Boolean)
+                              .join(' · ')}
+                        </p>
+                      )}
+                      {item.sku && (
+                        <p className="text-[11px] text-ink-400 mt-0.5">SKU: {item.sku}</p>
+                      )}
+                      <p className="text-ink-500 mt-1">
+                        {item.quantity} × {formatPrice(item.price)}
+                      </p>
+                    </div>
+                    <span className="font-semibold shrink-0">{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>

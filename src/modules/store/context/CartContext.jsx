@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { buildLineItem } from '@modules/store/utils/lineItem.js';
 
 const CartContext = createContext(null);
 
@@ -18,10 +19,14 @@ export const CartProvider = ({ children }) => {
       return { ok: false, message: 'المنتج غير متوفر' };
     }
 
+    const line = buildLineItem(product, variant, quantity);
+    if (!line) {
+      return { ok: false, message: 'يرجى اختيار اللون والمقاس' };
+    }
+
     let added = true;
     setItems((prev) => {
-      const key = variant ? `${product.id}-${variant.id}` : `${product.id}`;
-      const existing = prev.find((i) => i.key === key);
+      const existing = prev.find((i) => i.key === line.key);
       const newQty = existing ? existing.quantity + quantity : quantity;
 
       if (newQty > stock) {
@@ -30,24 +35,13 @@ export const CartProvider = ({ children }) => {
       }
 
       if (existing) {
+        // Preserve original variant snapshot; only update quantity
         return prev.map((i) =>
-          i.key === key ? { ...i, quantity: newQty } : i
+          i.key === line.key ? { ...i, quantity: newQty } : i
         );
       }
 
-      const price = variant?.price || product.price;
-      return [...prev, {
-        key,
-        product_id: product.id,
-        variant_id: variant?.id || null,
-        name: product.name_ar,
-        variant_info: variant ? [variant.color_name, variant.size_name].filter(Boolean).join(' - ') : null,
-        price: parseFloat(price),
-        compare_price: parseFloat(variant?.compare_price || product.compare_price || 0),
-        image: variant?.image || product.primary_image || product.images?.[0]?.url,
-        quantity,
-        stock,
-      }];
+      return [...prev, { ...line, quantity }];
     });
 
     return added ? { ok: true } : { ok: false, message: 'الكمية المطلوبة غير متاحة' };

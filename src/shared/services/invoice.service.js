@@ -1,17 +1,44 @@
 import { ORDER_STATUS, formatPrice } from '@core/constants';
+import { resolveMediaUrl } from '@core/api/config.js';
+
+function itemVariantLabel(item) {
+  if (item.color_name || item.size_name) {
+    const parts = [];
+    if (item.color_name) parts.push(`اللون: ${item.color_name}`);
+    if (item.size_name) parts.push(`المقاس: ${item.size_name}`);
+    return parts.join(' · ');
+  }
+  return item.variant_info || '';
+}
 
 export function printOrderInvoice(order, storeName = 'متجر كرم') {
   const statusLabel = ORDER_STATUS[order.status]?.label || order.status;
   const itemsRows = (order.items || [])
-    .map(
-      (item) => `
+    .map((item) => {
+      const variant = itemVariantLabel(item);
+      const img = item.image ? resolveMediaUrl(item.image) : '';
+      return `
       <tr>
-        <td>${item.product_name}${item.variant_info ? ` (${item.variant_info})` : ''}</td>
+        <td>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            ${
+              img
+                ? `<img src="${img}" alt="" width="48" height="48" style="object-fit:cover;border-radius:8px;border:1px solid #eee" />`
+                : ''
+            }
+            <div>
+              <div style="font-weight:700">${item.product_name || ''}</div>
+              ${variant ? `<div style="color:#004D40;font-size:13px;margin-top:2px">${variant}</div>` : ''}
+              ${item.sku ? `<div style="color:#666;font-size:12px;margin-top:2px">SKU: ${item.sku}</div>` : ''}
+              ${item.variant_id ? `<div style="color:#999;font-size:11px">نسخة #${item.variant_id}</div>` : ''}
+            </div>
+          </div>
+        </td>
         <td>${item.quantity}</td>
         <td>${formatPrice(item.unit_price)}</td>
         <td>${formatPrice(item.total)}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join('');
 
   const html = `<!DOCTYPE html>
@@ -24,7 +51,7 @@ export function printOrderInvoice(order, storeName = 'متجر كرم') {
     h1 { margin-bottom: 4px; }
     .meta { color: #555; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: right; vertical-align: top; }
     th { background: #f5f5f5; }
     .totals { margin-top: 16px; width: 300px; margin-right: auto; }
     .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
@@ -48,7 +75,7 @@ export function printOrderInvoice(order, storeName = 'متجر كرم') {
   </div>
   <table>
     <thead>
-      <tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
+      <tr><th>المنتج / النسخة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
     </thead>
     <tbody>${itemsRows}</tbody>
   </table>

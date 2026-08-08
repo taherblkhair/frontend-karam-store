@@ -690,12 +690,20 @@ export function ProductForm({
                   )}
                 </div>
 
-                <input
-                  className="input text-sm"
-                  placeholder="SKU"
-                  value={v.sku}
-                  onChange={(e) => updateVariant(idx, 'sku', e.target.value)}
-                />
+                <div>
+                  <input
+                    className="input text-sm font-mono"
+                    placeholder="SKU (تلقائي إن تُرك فارغاً)"
+                    value={v.sku}
+                    onChange={(e) => updateVariant(idx, 'sku', e.target.value)}
+                    title="يُولَّد تلقائياً عند الحفظ إذا تُرك فارغاً"
+                  />
+                  {!v.sku && (
+                    <p className="text-[11px] text-ink-400 mt-0.5">
+                      يُنشأ تلقائياً مثل: SKU-C1-S2-V3
+                    </p>
+                  )}
+                </div>
                 <div>
                   <input
                     className="input text-sm"
