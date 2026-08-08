@@ -9,6 +9,7 @@ import { formatPrice, ORDER_STATUS, getWhatsAppLink } from '@core/constants';
 import { printOrderInvoice } from '@shared/services/invoice.service';
 import { useAuth } from '@core/auth/AuthContext';
 import { TableScroll } from '@shared/components/TableScroll';
+import { resolveMediaUrl } from '@core/api/config.js';
 
 const STATUS_OPTIONS = {
   admin: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
@@ -208,30 +209,77 @@ export default function OrdersPage() {
             </div>
 
             <div>
-              <h3 className="font-bold mb-3">المنتجات</h3>
-              <div className="overflow-x-auto -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <table className="admin-table border dark:border-gray-700 rounded-lg">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="text-right p-3">المنتج</th>
-                      <th className="text-right p-3">SKU</th>
-                      <th className="text-right p-3">الكمية</th>
-                      <th className="text-right p-3">السعر</th>
-                      <th className="text-right p-3">الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.items?.map((item) => (
-                      <tr key={item.id} className="border-t dark:border-gray-700">
-                        <td className="p-3">{item.product_name}{item.variant_info ? ` (${item.variant_info})` : ''}</td>
-                        <td className="p-3">{item.sku || '-'}</td>
-                        <td className="p-3">{item.quantity}</td>
-                        <td className="p-3">{formatPrice(item.unit_price)}</td>
-                        <td className="p-3">{formatPrice(item.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="font-bold mb-3">المنتجات والنسخ المحددة</h3>
+              <div className="space-y-3">
+                {order.items?.map((item) => (
+                  <div
+                    key={item.id}
+                    className="card p-3 sm:p-4 flex gap-3 sm:gap-4 border border-ink-100 dark:border-gray-700"
+                  >
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-tertiary-100 dark:bg-gray-700 shrink-0 ring-1 ring-ink-100 dark:ring-gray-600">
+                      {item.image ? (
+                        <img
+                          src={resolveMediaUrl(item.image)}
+                          alt={item.product_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-ink-300">
+                          بلا صورة
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-ink-800 dark:text-gray-100">
+                        {item.product_name}
+                      </div>
+                      {(item.variant_info || item.color_name || item.size_name || item.variant_id) && (
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {item.color_name && (
+                            <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
+                              اللون: {item.color_name}
+                            </span>
+                          )}
+                          {item.size_name && (
+                            <span className="inline-flex items-center rounded-full bg-secondary-50 text-ink-800 dark:bg-secondary-900/20 px-2.5 py-0.5 text-xs font-semibold">
+                              المقاس: {item.size_name}
+                            </span>
+                          )}
+                          {!item.color_name && !item.size_name && item.variant_info && (
+                            <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
+                              {item.variant_info}
+                            </span>
+                          )}
+                          {item.variant_id && (
+                            <span className="inline-flex items-center rounded-full bg-ink-50 text-ink-500 dark:bg-ink-800 px-2.5 py-0.5 text-[11px]">
+                              معرّف النسخة #{item.variant_id}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-500 dark:text-gray-400">
+                        <span>
+                          SKU:{' '}
+                          <strong className="text-ink-700 dark:text-gray-200 font-mono text-xs">
+                            {item.sku || '—'}
+                          </strong>
+                        </span>
+                        <span>
+                          الكمية: <strong className="text-ink-800 dark:text-gray-100">{item.quantity}</strong>
+                        </span>
+                        <span>
+                          سعر الوحدة:{' '}
+                          <strong className="text-ink-800 dark:text-gray-100">
+                            {formatPrice(item.unit_price)}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-left shrink-0 font-bold text-primary-600 tabular-nums">
+                      {formatPrice(item.total)}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

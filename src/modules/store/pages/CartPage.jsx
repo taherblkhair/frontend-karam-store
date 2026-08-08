@@ -30,7 +30,17 @@ export default function CartPage() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium">{item.name}</h3>
-                    {item.variant_info && <p className="text-sm text-gray-500">{item.variant_info}</p>}
+                    {(item.variant_info || item.color_name || item.size_name) && (
+                      <p className="text-sm font-medium text-primary-600 mt-0.5">
+                        {item.variant_info
+                          || [item.color_name && `اللون: ${item.color_name}`, item.size_name && `المقاس: ${item.size_name}`]
+                            .filter(Boolean)
+                            .join(' · ')}
+                      </p>
+                    )}
+                    {item.sku && (
+                      <p className="text-xs text-ink-400 mt-0.5">SKU: {item.sku}</p>
+                    )}
                     <p className="text-primary-600 font-bold mt-1">{formatPrice(item.price)}</p>
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex items-center border rounded-lg">

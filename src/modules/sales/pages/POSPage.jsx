@@ -131,7 +131,10 @@ export default function POSPage() {
       variantId: variant.id,
       stock: variant.stock,
       price: variant.price || variantProduct.price,
-      variantInfo: [variant.color_name, variant.size_name].filter(Boolean).join(' - ') || null,
+      variantInfo:
+        [variant.color_name && `اللون: ${variant.color_name}`, variant.size_name && `المقاس: ${variant.size_name}`]
+          .filter(Boolean)
+          .join(' · ') || null,
       image: variant.image
         || variantProduct.primary_image
         || variantProduct.images?.[0]?.url,
@@ -200,7 +203,7 @@ export default function POSPage() {
       shipping_cost: 0,
       items: cart.map((i) => ({
         product_id: i.product_id,
-        variant_id: i.variant_id,
+        variant_id: i.variant_id ?? null,
         quantity: i.quantity,
       })),
     };
