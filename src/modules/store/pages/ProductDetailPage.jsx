@@ -68,6 +68,22 @@ async function fetchPicksForYou(product) {
   return picks.slice(0, PICKS_LIMIT);
 }
 
+function OptionChip({ active, onClick, children, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`min-h-11 px-3.5 sm:px-4 py-2.5 rounded-xl border text-sm font-medium transition active:scale-[0.98] inline-flex items-center gap-2 ${
+        active
+          ? 'border-primary-600 bg-primary-50 text-primary-800 ring-2 ring-primary-600/20 dark:bg-primary-900/30 dark:text-primary-100'
+          : 'border-ink-200 bg-white text-ink-700 hover:border-primary-600/40 dark:border-gray-600 dark:bg-ink-800 dark:text-gray-100'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function ProductDetailPage() {
   const { slug: slugParam } = useParams();
   const slug = decodeProductSlug(slugParam);
@@ -92,7 +108,6 @@ export default function ProductDetailPage() {
     staleTime: 60_000,
   });
 
-  // Canonical clean URL: /product/human-slug (rewrites old numeric ids)
   useEffect(() => {
     if (!product?.slug) return;
     if (product.slug !== slug) {
@@ -148,7 +163,7 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <StoreLayout>
-        <div className="text-center py-20">المنتج غير موجود</div>
+        <div className="text-center py-16 sm:py-20 px-4">المنتج غير موجود</div>
       </StoreLayout>
     );
   }
@@ -157,13 +172,15 @@ export default function ProductDetailPage() {
   const hasVariants = variants.length > 0;
   const currentPrice = selectedVariant?.price || product.price;
   const currentStock = selectedVariant?.stock ?? product.total_stock;
+  const maxQty = Math.max(1, Number(currentStock) || 1);
+  const outOfStock = Number(currentStock) <= 0;
 
   const ensureVariant = () => {
     if (hasVariants && !selectedVariant) {
       notifyError({ message: 'يرجى اختيار اللون والمقاس' });
       return false;
     }
-    if (currentStock <= 0) {
+    if (outOfStock) {
       notifyError({ message: 'المنتج غير متوفر' });
       return false;
     }
@@ -228,50 +245,113 @@ export default function ProductDetailPage() {
     ).values(),
   ];
 
+  const qtyControl = (
+    <div className="inline-flex items-center rounded-xl border border-ink-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-ink-800">
+      <button
+        type="button"
+        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+        className="flex h-11 w-11 items-center justify-center hover:bg-tertiary-100 dark:hover:bg-ink-700 transition"
+        aria-label="إنقاص الكمية"
+      >
+        <Minus size={18} />
+      </button>
+      <span className="min-w-[2.5rem] text-center font-semibold tabular-nums px-1">
+        {quantity}
+      </span>
+      <button
+        type="button"
+        onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+        className="flex h-11 w-11 items-center justify-center hover:bg-tertiary-100 dark:hover:bg-ink-700 transition"
+        aria-label="زيادة الكمية"
+      >
+        <Plus size={18} />
+      </button>
+    </div>
+  );
+
+  const buyButtons = (
+    <>
+      <button
+        type="button"
+        onClick={handleOrderNow}
+        disabled={outOfStock}
+        className="inline-flex flex-1 min-h-12 items-center justify-center gap-2 rounded-xl bg-secondary-400 hover:bg-secondary-500 text-ink-800 font-bold text-base sm:text-lg px-4 sm:px-6 py-3 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Zap size={20} strokeWidth={2.25} className="shrink-0" />
+        <span className="truncate">اطلب الآن</span>
+      </button>
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        disabled={outOfStock}
+        className="btn-primary flex-1 min-h-12 text-base sm:text-lg px-4 sm:px-6 py-3 disabled:opacity-50"
+      >
+        <ShoppingCart size={20} className="shrink-0" />
+        <span className="truncate">أضف للسلة</span>
+      </button>
+    </>
+  );
+
   return (
     <StoreLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          <ProductImageGallery
-            product={product}
-            selectedVariant={selectedVariant}
-            onVariantImageSelect={handleVariantImageSelect}
-          />
+      {/* Extra bottom space on mobile: sticky CTA + bottom nav */}
+      <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-8 pb-32 md:pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 lg:gap-12 lg:items-start">
+          {/* Gallery */}
+          <div className="min-w-0 -mx-3 sm:mx-0 px-0 sm:px-0">
+            <div className="sm:rounded-none px-3 sm:px-0">
+              <ProductImageGallery
+                product={product}
+                selectedVariant={selectedVariant}
+                onVariantImageSelect={handleVariantImageSelect}
+              />
+            </div>
+          </div>
 
-          <div>
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <h1 className="text-2xl md:text-3xl font-bold flex-1">{product.name_ar}</h1>
+          {/* Buy box */}
+          <div className="min-w-0 flex flex-col">
+            <div className="flex items-start gap-2 sm:gap-3 mb-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex-1 leading-snug break-words">
+                {product.name_ar}
+              </h1>
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="btn-outline shrink-0 text-sm rounded-full inline-flex items-center gap-1.5"
+                className="btn-outline shrink-0 h-10 w-10 sm:h-auto sm:w-auto sm:rounded-full sm:px-3 sm:py-2 p-0 rounded-full inline-flex items-center justify-center gap-1.5 text-sm"
                 title="نسخ رابط المنتج"
+                aria-label={linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
               >
-                {linkCopied ? <Check size={16} className="text-primary-600" /> : <Link2 size={16} />}
-                {linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
+                {linkCopied ? (
+                  <Check size={18} className="text-primary-600" />
+                ) : (
+                  <Link2 size={18} />
+                )}
+                <span className="hidden sm:inline">
+                  {linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
+                </span>
               </button>
             </div>
 
             {product.category_name && (
-              <p className="text-gray-500 mb-4">{product.category_name}</p>
+              <p className="text-sm text-ink-500 mb-3 sm:mb-4">{product.category_name}</p>
             )}
 
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl font-bold text-primary-600">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4 sm:mb-6">
+              <span className="text-2xl sm:text-3xl font-bold text-primary-600 tabular-nums">
                 {formatPrice(currentPrice)}
               </span>
               {product.compare_price &&
                 parseFloat(product.compare_price) > parseFloat(currentPrice) && (
-                  <span className="text-xl text-gray-400 line-through">
+                  <span className="text-base sm:text-xl text-ink-300 line-through tabular-nums">
                     {formatPrice(product.compare_price)}
                   </span>
                 )}
             </div>
 
             {product.description && (
-              <div className="mb-6">
-                <h3 className="font-bold mb-2">الوصف</h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+              <div className="mb-5 sm:mb-6">
+                <h3 className="font-bold mb-1.5 text-sm sm:text-base">الوصف</h3>
+                <p className="text-sm sm:text-base text-ink-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">
                   {product.description}
                 </p>
               </div>
@@ -279,27 +359,27 @@ export default function ProductDetailPage() {
 
             {uniqueColors.length > 0 && (
               <div className="mb-4">
-                <h3 className="font-bold mb-2">اللون</h3>
+                <h3 className="font-bold mb-2 text-sm sm:text-base">
+                  اللون
+                  {selectedVariant?.color_name ? (
+                    <span className="font-medium text-ink-500"> · {selectedVariant.color_name}</span>
+                  ) : null}
+                </h3>
                 <div className="flex gap-2 flex-wrap">
                   {uniqueColors.map((c) => (
-                    <button
+                    <OptionChip
                       key={c.id}
-                      type="button"
+                      active={selectedVariant?.color_id === c.id}
                       onClick={() => selectColor(c.id)}
-                      className={`px-4 py-2 rounded-lg border inline-flex items-center gap-2 ${
-                        selectedVariant?.color_id === c.id
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-gray-300'
-                      }`}
                     >
                       {c.hex && (
                         <span
-                          className="inline-block w-4 h-4 rounded-full border border-black/10"
+                          className="inline-block w-4 h-4 rounded-full border border-black/10 shrink-0"
                           style={{ backgroundColor: c.hex }}
                         />
                       )}
-                      {c.name}
-                    </button>
+                      <span className="truncate max-w-[8rem]">{c.name}</span>
+                    </OptionChip>
                   ))}
                 </div>
               </div>
@@ -307,21 +387,22 @@ export default function ProductDetailPage() {
 
             {uniqueSizes.length > 0 && (
               <div className="mb-4">
-                <h3 className="font-bold mb-2">المقاس</h3>
+                <h3 className="font-bold mb-2 text-sm sm:text-base">
+                  المقاس
+                  {selectedVariant?.size_name ? (
+                    <span className="font-medium text-ink-500"> · {selectedVariant.size_name}</span>
+                  ) : null}
+                </h3>
                 <div className="flex gap-2 flex-wrap">
                   {uniqueSizes.map((s) => (
-                    <button
+                    <OptionChip
                       key={s.id}
-                      type="button"
+                      active={selectedVariant?.size_id === s.id}
                       onClick={() => selectSize(s.id)}
-                      className={`px-4 py-2 rounded-lg border ${
-                        selectedVariant?.size_id === s.id
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-gray-300'
-                      }`}
+                      className="min-w-[2.75rem] justify-center"
                     >
                       {s.name}
-                    </button>
+                    </OptionChip>
                   ))}
                 </div>
               </div>
@@ -329,61 +410,44 @@ export default function ProductDetailPage() {
 
             <p className="text-sm mb-4">
               الحالة:{' '}
-              {currentStock > 0 ? (
+              {!outOfStock ? (
                 <span className="text-green-600 font-medium">متوفر</span>
               ) : (
                 <span className="text-red-600 font-medium">غير متوفر</span>
               )}
             </p>
 
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center border rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-3 hover:bg-gray-100"
-                >
-                  <Minus size={18} />
-                </button>
-                <span className="px-4 font-medium">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
-                  className="p-3 hover:bg-gray-100"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <span className="text-sm text-ink-500 shrink-0">الكمية</span>
+              {qtyControl}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={handleOrderNow}
-                disabled={currentStock <= 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary-400 hover:bg-secondary-500 text-ink-800 font-bold text-lg py-3.5 px-8 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-1"
-              >
-                <Zap size={20} strokeWidth={2.25} />
-                اطلب الآن
-              </button>
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={currentStock <= 0}
-                className="btn-primary text-lg py-3.5 px-8 flex-1"
-              >
-                <ShoppingCart size={20} /> أضف للسلة
-              </button>
+            {/* Desktop / tablet actions (hidden on small phones — sticky bar) */}
+            <div className="hidden sm:flex flex-col sm:flex-row gap-3">
+              {buyButtons}
             </div>
-            <p className="mt-3 text-xs text-ink-400">
+            <p className="hidden sm:block mt-3 text-xs text-ink-400 leading-relaxed">
               «اطلب الآن» ينقلك مباشرة لإتمام الطلب لهذا المنتج فقط دون التأثير على محتويات السلة.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Sticky mobile purchase bar — above bottom tab nav */}
+      <div
+        className="sm:hidden fixed inset-x-0 z-40 border-t border-ink-100 bg-white/95 backdrop-blur-md dark:bg-ink-900/95 dark:border-gray-700"
+        style={{
+          bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
+          paddingBottom: '0.5rem',
+        }}
+      >
+        <div className="container mx-auto px-3 pt-2.5 flex gap-2">
+          {buyButtons}
+        </div>
+      </div>
+
       {picks.length > 0 && (
-        <div className="border-t border-ink-100 dark:border-gray-800 bg-tertiary-100/60 dark:bg-ink-900/40">
+        <div className="border-t border-ink-100 dark:border-gray-800 bg-tertiary-100/60 dark:bg-ink-900/40 pb-4 sm:pb-0">
           <StoreProductSection
             title="عروض اخترنا لك"
             to="/products?featured=true"
@@ -391,7 +455,7 @@ export default function ProductDetailPage() {
             products={picks}
             badge="اخترنا لك"
             limit={PICKS_LIMIT}
-            className="!py-10 sm:!py-12"
+            className="!py-8 sm:!py-12"
           />
         </div>
       )}

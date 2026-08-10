@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { ProtectedRoute, GuestRoute } from '@core/auth/ProtectedRoute';
 import AdminLayout from '@shared/layouts/AdminLayout';
 import StoreAccessGate from '@modules/store/components/StoreAccessGate';
+import { ScrollToTop } from '@shared/components/ScrollToTop';
 
 import HomePage from '@modules/store/pages/HomePage';
 import StoreProductsPage from '@modules/store/pages/ProductsPage';
@@ -39,6 +40,7 @@ function LegacyProductRedirect() {
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Storefront — blocked when site is in maintenance / development */}
         <Route element={<StoreAccessGate />}>

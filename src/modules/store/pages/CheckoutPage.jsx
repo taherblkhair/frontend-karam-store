@@ -32,6 +32,11 @@ export default function CheckoutPage() {
     if (isBuyNow) setBuyNowItemsState(getBuyNowItems());
   }, [isBuyNow]);
 
+  // Always open at the top (delivery form), not mid-page order summary
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [isBuyNow]);
+
   const items = isBuyNow ? buyNowItems : cartItems;
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),

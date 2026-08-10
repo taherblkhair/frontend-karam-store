@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Expand, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { OptimizedImage, OptimizedThumb } from '@shared/components/OptimizedImage';
 import { ProductImageLightbox } from '@modules/store/components/ProductImageLightbox';
 
@@ -68,6 +68,7 @@ export function buildDetailGallery(product) {
 
 /**
  * Full product image gallery with thumbnails + swipe + fullscreen zoom viewer.
+ * Mobile-first: capped height, safe controls, horizontal thumbs.
  */
 export function ProductImageGallery({
   product,
@@ -105,7 +106,6 @@ export function ProductImageGallery({
     setLightboxOpen(true);
   }, [count]);
 
-  // Sync gallery when user picks a color/variant with its own image
   useEffect(() => {
     if (!selectedVariant?.image || !count) return;
     const idx = gallery.findIndex((g) => g.image === selectedVariant.image);
@@ -117,7 +117,6 @@ export function ProductImageGallery({
     setLightboxOpen(false);
   }, [product?.id]);
 
-  // Keyboard only when lightbox closed (lightbox handles its own keys)
   useEffect(() => {
     if (lightboxOpen) return undefined;
     const onKey = (e) => {
@@ -134,7 +133,6 @@ export function ProductImageGallery({
     return () => window.removeEventListener('keydown', onKey);
   }, [count, go, lightboxOpen]);
 
-  // Touch swipe — skip multi-touch (pinch handled in lightbox)
   useEffect(() => {
     const el = viewportRef.current;
     if (!el || count <= 1) return undefined;
@@ -162,7 +160,7 @@ export function ProductImageGallery({
   if (!count) {
     return (
       <div
-        className={`aspect-square rounded-2xl bg-tertiary-100 dark:bg-gray-800 flex items-center justify-center text-ink-300 ${className}`}
+        className={`aspect-[4/5] sm:aspect-square max-h-[min(70dvh,520px)] sm:max-h-none rounded-2xl bg-tertiary-100 dark:bg-gray-800 flex items-center justify-center text-ink-300 ${className}`}
       >
         لا توجد صورة
       </div>
@@ -170,10 +168,10 @@ export function ProductImageGallery({
   }
 
   return (
-    <div className={className} dir="ltr">
+    <div className={`w-full min-w-0 ${className}`} dir="ltr">
       <div
         ref={viewportRef}
-        className="relative aspect-square rounded-2xl overflow-hidden bg-tertiary-100 dark:bg-gray-800 group select-none touch-pan-y"
+        className="relative w-full aspect-[4/5] sm:aspect-square max-h-[min(68dvh,560px)] sm:max-h-[min(80vh,640px)] mx-auto rounded-xl sm:rounded-2xl overflow-hidden bg-tertiary-100 dark:bg-gray-800 group select-none touch-pan-y"
         aria-roledescription="carousel"
         aria-label="صور المنتج"
       >
@@ -189,32 +187,23 @@ export function ProductImageGallery({
             alt={current.label || product?.name_ar || 'صورة المنتج'}
             className="w-full h-full pointer-events-none"
             imgClassName="transition-transform duration-500 group-hover:scale-[1.03]"
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
             widths={[400, 800, 1200]}
+            preferSrcWidth={800}
             priority={safeIndex === 0}
           />
         </button>
 
-        <div className="absolute bottom-3 left-3 z-10 flex gap-2 pointer-events-none sm:pointer-events-auto">
-          <button
-            type="button"
-            onClick={openLightbox}
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-ink-900/75 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-sm transition hover:bg-ink-900"
-            aria-label="فتح المعاينة بالتكبير"
-          >
-            <ZoomIn size={14} strokeWidth={2.25} />
-            تكبير
-          </button>
-          <button
-            type="button"
-            onClick={openLightbox}
-            className="pointer-events-auto hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink-800 shadow-sm transition hover:bg-white"
-            aria-label="عرض بملء الشاشة"
-          >
-            <Expand size={14} strokeWidth={2.25} />
-            ملء الشاشة
-          </button>
-        </div>
+        {/* Zoom — top area on mobile to avoid dots clash */}
+        <button
+          type="button"
+          onClick={openLightbox}
+          className="absolute top-2.5 left-2.5 z-10 inline-flex h-9 w-9 sm:h-auto sm:w-auto items-center justify-center gap-1.5 rounded-full bg-ink-900/75 sm:px-3 sm:py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-sm transition hover:bg-ink-900"
+          aria-label="فتح المعاينة بالتكبير"
+        >
+          <ZoomIn size={16} strokeWidth={2.25} />
+          <span className="hidden sm:inline">تكبير</span>
+        </button>
 
         {count > 1 && (
           <>
@@ -224,10 +213,10 @@ export function ProductImageGallery({
                 e.stopPropagation();
                 go(-1);
               }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 text-ink-800 shadow hover:bg-white opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition"
+              className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/90 text-ink-800 shadow hover:bg-white transition"
               aria-label="الصورة السابقة"
             >
-              <ChevronLeft size={22} />
+              <ChevronLeft size={20} />
             </button>
             <button
               type="button"
@@ -235,13 +224,13 @@ export function ProductImageGallery({
                 e.stopPropagation();
                 go(1);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 text-ink-800 shadow hover:bg-white opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition"
+              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/90 text-ink-800 shadow hover:bg-white transition"
               aria-label="الصورة التالية"
             >
-              <ChevronRight size={22} />
+              <ChevronRight size={20} />
             </button>
 
-            <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+            <div className="absolute bottom-2.5 inset-x-0 flex justify-center gap-1.5 z-10 pointer-events-none px-10">
               {gallery.map((slide, i) => (
                 <button
                   key={slide.id}
@@ -250,28 +239,28 @@ export function ProductImageGallery({
                   aria-label={`صورة ${i + 1}`}
                   aria-current={i === safeIndex ? 'true' : undefined}
                   className={`pointer-events-auto h-1.5 rounded-full transition-all ${
-                    i === safeIndex ? 'w-6 bg-primary-600' : 'w-1.5 bg-white/70 hover:bg-white'
+                    i === safeIndex ? 'w-5 sm:w-6 bg-primary-600' : 'w-1.5 bg-white/75 hover:bg-white'
                   }`}
                 />
               ))}
             </div>
 
-            <span className="absolute top-3 right-3 z-10 text-xs font-medium px-2 py-1 rounded-full bg-black/45 text-white backdrop-blur-sm">
+            <span className="absolute top-2.5 right-2.5 z-10 text-[11px] sm:text-xs font-medium px-2 py-1 rounded-full bg-black/45 text-white backdrop-blur-sm tabular-nums">
               {safeIndex + 1} / {count}
             </span>
           </>
         )}
 
         {current.color_name && (
-          <span className="absolute top-3 left-3 z-10 text-xs font-medium px-2 py-1 rounded-full bg-white/90 text-ink-800 shadow-sm">
+          <span className="absolute bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 z-10 text-[11px] sm:text-xs font-medium px-2.5 py-1 rounded-full bg-white/95 text-ink-800 shadow-sm max-w-[80%] truncate">
             {current.color_name}
           </span>
         )}
       </div>
 
-      {count > 0 && (
+      {count > 1 && (
         <div
-          className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x"
+          className="mt-2.5 sm:mt-3 flex gap-2 overflow-x-auto overscroll-x-contain pb-1 snap-x snap-mandatory scrollbar-none -mx-0.5 px-0.5"
           role="tablist"
           aria-label="معرض صور المنتج"
           dir="rtl"
@@ -290,16 +279,16 @@ export function ProductImageGallery({
                   goTo(i);
                   setLightboxOpen(true);
                 }}
-                className={`relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl overflow-hidden border-2 snap-start transition ${
+                className={`relative shrink-0 w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-lg sm:rounded-xl overflow-hidden border-2 snap-start transition ${
                   active
                     ? 'border-primary-600 ring-2 ring-primary-600/25'
-                    : 'border-ink-100 hover:border-primary-300'
+                    : 'border-ink-100 hover:border-primary-300 dark:border-gray-600'
                 }`}
               >
                 <OptimizedThumb src={slide.image} alt="" className="w-full h-full" />
                 {slide.hex_code && (
                   <span
-                    className="absolute bottom-1 start-1 w-3 h-3 rounded-full border border-white shadow"
+                    className="absolute bottom-1 start-1 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border border-white shadow"
                     style={{ backgroundColor: slide.hex_code }}
                     aria-hidden
                   />
