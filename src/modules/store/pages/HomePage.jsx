@@ -32,12 +32,13 @@ function CategoriesSection({ categories }) {
 }
 
 export default function HomePage() {
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['store-home'],
     queryFn: () => storeApi.home(),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const home = data?.data;
@@ -48,6 +49,14 @@ export default function HomePage() {
 
       {isLoading && !home ? (
         <LoadingSpinner />
+      ) : isError && !home ? (
+        <div className="container mx-auto px-4 py-16 text-center">
+          <p className="text-ink-600 mb-4">تعذر تحميل الصفحة الرئيسية</p>
+          <p className="text-sm text-ink-400 mb-6">{error?.message || ''}</p>
+          <button type="button" className="btn-primary rounded-full" onClick={() => refetch()}>
+            إعادة المحاولة
+          </button>
+        </div>
       ) : (
         <>
           {isFetching && home ? (
