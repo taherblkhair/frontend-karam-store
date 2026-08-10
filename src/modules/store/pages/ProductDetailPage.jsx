@@ -7,6 +7,7 @@ import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner } from '@shared/ui';
 import { ProductImageGallery } from '@modules/store/components/ProductImageGallery';
+import { ProductDetailAccordions } from '@modules/store/components/ProductDetailAccordions';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { useCart } from '@modules/store/context/CartContext';
 import { formatPrice } from '@core/constants';
@@ -429,6 +430,9 @@ export default function ProductDetailPage() {
             <p className="hidden sm:block mt-3 text-xs text-ink-400 leading-relaxed">
               «اطلب الآن» ينقلك مباشرة لإتمام الطلب لهذا المنتج فقط دون التأثير على محتويات السلة.
             </p>
+
+            {/* Shipping & inspection — under cart CTAs */}
+            <ProductDetailAccordions />
           </div>
         </div>
       </div>
