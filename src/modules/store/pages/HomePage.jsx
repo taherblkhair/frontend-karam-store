@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { ArrowLeft, BadgeCheck, PackageCheck, Truck } from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner } from '@shared/ui';
@@ -10,21 +11,48 @@ import { StoreProductSection } from '@modules/store/components/StoreProductCard'
 function CategoriesSection({ categories }) {
   if (!categories?.length) return null;
   return (
-    <section className="container mx-auto px-4 py-10 sm:py-12">
+    <section className="container mx-auto px-4 py-12 sm:py-16">
       <div className="mb-5 sm:mb-6 flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
-          التصنيفات
-        </h2>
+        <div>
+          <p className="store-section-kicker">اختاري أسلوبك</p>
+          <h2 className="store-section-title">تسوّقي حسب التصنيف</h2>
+        </div>
         <Link
           to="/products"
-          className="shrink-0 text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
+          className="store-link shrink-0"
         >
-          عرض الكل
+          عرض الكل <ArrowLeft size={16} />
         </Link>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {categories.map((cat) => (
           <CategoryCard key={cat.id} category={cat} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TrustStrip() {
+  const items = [
+    { icon: Truck, title: 'توصيل لكل ليبيا', text: 'نوصل طلبك لباب البيت' },
+    { icon: BadgeCheck, title: 'معاينة قبل الاستلام', text: 'تأكدي من اختيارك براحتك' },
+    { icon: PackageCheck, title: 'تغليف مرتب', text: 'كل طلب يوصلك بعناية' },
+  ];
+
+  return (
+    <section className="container mx-auto -mt-1 px-4 pt-6 sm:pt-8">
+      <div className="grid gap-3 rounded-3xl border border-[#eee5df] bg-white p-4 shadow-soft sm:grid-cols-3 sm:p-5">
+        {items.map(({ icon: Icon, title, text }) => (
+          <div key={title} className="flex items-center gap-3 rounded-2xl bg-blush-50/60 p-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-primary-700 shadow-sm">
+              <Icon size={20} strokeWidth={1.8} />
+            </span>
+            <div>
+              <p className="text-sm font-bold text-ink-800">{title}</p>
+              <p className="mt-0.5 text-xs text-ink-400">{text}</p>
+            </div>
+          </div>
         ))}
       </div>
     </section>
@@ -46,6 +74,7 @@ export default function HomePage() {
   return (
     <StoreLayout>
       <BannerCarousel banners={home?.banners || []} />
+      <TrustStrip />
 
       {isLoading && !home ? (
         <LoadingSpinner />
@@ -69,6 +98,7 @@ export default function HomePage() {
 
           <StoreProductSection
             title="عروض مميزة"
+            kicker="مختارات كرم"
             to="/products?featured=true"
             products={home?.featuredProducts || []}
             badge="مميز"
@@ -78,6 +108,7 @@ export default function HomePage() {
 
           <StoreProductSection
             title="وصل حديثاً"
+            kicker="جديدنا"
             to="/products?is_new=true"
             products={home?.newProducts || []}
             showNewBadge
@@ -86,6 +117,7 @@ export default function HomePage() {
 
           <StoreProductSection
             title="الأكثر مبيعاً"
+            kicker="اختيارات عميلاتنا"
             to="/products"
             products={home?.topSelling || []}
             badge="رائج"
