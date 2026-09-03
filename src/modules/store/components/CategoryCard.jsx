@@ -12,11 +12,11 @@ export function CategoryCard({ category, active = false, to }) {
   return (
     <Link
       to={href}
-      className={`group card overflow-hidden text-center transition hover:shadow-md hover:border-primary-300 ${
+      className={`group overflow-hidden rounded-[1.4rem] border border-[#eee6e0] bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blush-300 hover:shadow-soft ${
         active ? 'border-primary-500 ring-2 ring-primary-200 dark:ring-primary-900' : ''
       }`}
     >
-      <div className="aspect-square bg-tertiary-100 dark:bg-gray-700 overflow-hidden">
+      <div className="aspect-square bg-blush-50 dark:bg-gray-700 overflow-hidden">
         {category.image ? (
           <OptimizedImage
             src={category.image}
@@ -32,8 +32,8 @@ export function CategoryCard({ category, active = false, to }) {
           </div>
         )}
       </div>
-      <div className="p-3">
-        <h3 className="font-medium text-sm line-clamp-2">{category.name_ar}</h3>
+      <div className="p-3.5">
+        <h3 className="font-semibold text-sm text-ink-700 line-clamp-2">{category.name_ar}</h3>
       </div>
     </Link>
   );
