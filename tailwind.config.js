@@ -31,6 +31,16 @@ export default {
           800: '#855f07',
           900: '#714e0c',
         },
+        /* Soft feminine accent — used sparingly with the Karam green */
+        blush: {
+          50: '#FFF9F8',
+          100: '#FCEFED',
+          200: '#F7DDD9',
+          300: '#EDC3BC',
+          400: '#DFA39A',
+          500: '#C97F74',
+          600: '#AD6259',
+        },
         /* Tertiary surface #F9F8F6 */
         tertiary: {
           50: '#FDFCFB',
@@ -58,6 +68,8 @@ export default {
       },
       boxShadow: {
         pill: '0 8px 24px rgba(0, 77, 64, 0.22)',
+        soft: '0 12px 40px rgba(63, 45, 40, 0.08)',
+        float: '0 18px 55px rgba(63, 45, 40, 0.13)',
       },
     },
   },
