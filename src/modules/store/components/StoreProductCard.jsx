@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { ArrowLeft, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '@core/constants';
 import { OptimizedImage, OptimizedThumb } from '@shared/components/OptimizedImage';
@@ -132,8 +132,8 @@ export function StoreProductCard({
   const showThumbs = thumbs.length > 1;
 
   return (
-    <article className={`group flex flex-col ${className}`}>
-      <div className="relative overflow-hidden rounded-xl bg-tertiary-100 ring-1 ring-black/[0.04]">
+    <article className={`group flex flex-col rounded-[1.4rem] border border-transparent bg-white/60 p-2 transition duration-300 hover:-translate-y-1 hover:border-[#eee5df] hover:bg-white hover:shadow-soft ${className}`}>
+      <div className="relative overflow-hidden rounded-[1.15rem] bg-blush-50 ring-1 ring-black/[0.035]">
         <Link
           to={href}
           className="block aspect-[4/5] overflow-hidden bg-tertiary-200"
@@ -170,7 +170,7 @@ export function StoreProductCard({
           }}
           aria-label={saved ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
           aria-pressed={saved}
-          className="absolute top-2.5 left-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-sm ring-1 ring-black/5 transition hover:scale-105 hover:text-primary-600"
+          className="absolute top-2.5 left-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-600 shadow-sm ring-1 ring-black/5 backdrop-blur transition hover:scale-105 hover:bg-blush-50 hover:text-blush-600"
         >
           <Heart
             size={18}
@@ -243,12 +243,12 @@ export function StoreProductCard({
         </div>
       )}
 
-      <Link to={href} className="mt-2.5 block px-0.5 text-start flex-1">
+      <Link to={href} className="mt-3 block px-1 text-start flex-1">
         <h3 className="font-display text-[15px] sm:text-base font-bold text-ink-800 leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
           {product.name_ar}
         </h3>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
-          <p className="text-sm sm:text-[15px] font-medium text-ink-500">
+          <p className="text-sm sm:text-[15px] font-bold text-primary-700">
             {formatPrice(product.price)}
           </p>
           {hasDiscount && (
@@ -257,6 +257,9 @@ export function StoreProductCard({
             </p>
           )}
         </div>
+        <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-ink-400 transition group-hover:text-primary-600">
+          عرض التفاصيل <ArrowLeft size={13} />
+        </span>
       </Link>
     </article>
   );
@@ -267,6 +270,7 @@ export function StoreProductCard({
  */
 export function StoreProductSection({
   title,
+  kicker,
   to,
   linkLabel = 'عرض الكل',
   products = [],
@@ -283,15 +287,16 @@ export function StoreProductSection({
   return (
     <section className={`container mx-auto px-4 py-10 sm:py-12 ${className}`}>
       <div className="mb-5 sm:mb-6 flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
-          {title}
-        </h2>
+        <div>
+          {kicker ? <p className="store-section-kicker">{kicker}</p> : null}
+          <h2 className="store-section-title">{title}</h2>
+        </div>
         {to ? (
           <Link
             to={to}
-            className="shrink-0 text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
+            className="store-link shrink-0"
           >
-            {linkLabel}
+            {linkLabel} <ArrowLeft size={16} />
           </Link>
         ) : null}
       </div>
