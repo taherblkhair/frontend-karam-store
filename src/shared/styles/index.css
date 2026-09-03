@@ -7,7 +7,7 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-tertiary-100 text-ink-800 font-sans antialiased dark:bg-ink-900 dark:text-gray-100;
+    @apply bg-[#fcfaf8] text-ink-800 font-sans antialiased dark:bg-ink-900 dark:text-gray-100;
   }
   h1,
   h2,
@@ -57,7 +57,19 @@
       dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100;
   }
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-ink-100 dark:bg-gray-800 dark:border-gray-700;
+    @apply bg-white rounded-2xl shadow-sm border border-[#eee8e3] dark:bg-gray-800 dark:border-gray-700;
+  }
+
+  .store-section-title {
+    @apply font-display text-xl sm:text-2xl md:text-[1.7rem] font-bold text-ink-800 tracking-tight;
+  }
+
+  .store-section-kicker {
+    @apply mb-1 text-[11px] sm:text-xs font-bold tracking-[0.16em] text-blush-600 uppercase;
+  }
+
+  .store-link {
+    @apply inline-flex items-center gap-1.5 text-sm font-semibold text-primary-700 transition hover:text-primary-500;
   }
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
