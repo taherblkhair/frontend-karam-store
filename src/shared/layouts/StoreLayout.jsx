@@ -1,6 +1,6 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Moon, Sun, Home, Package, UserRound } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Moon, Sun, Home, Package, UserRound, Sparkles } from 'lucide-react';
 import { useCart } from '@modules/store/context/CartContext';
 import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
@@ -49,15 +49,24 @@ export default function StoreLayout({ children }) {
     location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-ink-100 dark:bg-gray-900/95 dark:border-gray-700">
+    <div className="min-h-screen flex flex-col bg-[#fcfaf8] dark:bg-ink-900">
+      <div className="bg-primary-700 px-4 py-2 text-center text-[11px] sm:text-xs font-medium text-white">
+        <span className="inline-flex items-center gap-2">
+          <Sparkles size={13} aria-hidden />
+          توصيل لكل مدن ليبيا · الدفع عند الاستلام · مسموح بالمعاينة
+        </span>
+      </div>
+      <header className="sticky top-0 z-50 bg-[#fcfaf8]/90 backdrop-blur-xl border-b border-[#ebe4de] dark:bg-gray-900/90 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
-            <Link to="/" className="text-xl md:text-2xl font-display font-bold text-primary-600">
-              {storeName}
+            <Link to="/" className="group inline-flex items-center gap-2.5 text-xl md:text-2xl font-display font-bold text-primary-700">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-700 text-white shadow-sm transition group-hover:-rotate-6">
+                <ShoppingBag size={18} strokeWidth={1.8} />
+              </span>
+              <span>{storeName}</span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-8 rounded-full border border-[#ece5df] bg-white/80 px-6 py-2.5 text-sm font-semibold shadow-sm">
               <Link to="/" className="hover:text-primary-600 transition">
                 الرئيسية
               </Link>
@@ -73,7 +82,7 @@ export default function StoreLayout({ children }) {
               <button
                 type="button"
                 onClick={toggle}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-2.5 rounded-full border border-[#ece5df] bg-white hover:border-blush-300 hover:bg-blush-50 dark:bg-gray-800 dark:border-gray-700"
                 aria-label="تبديل المظهر"
               >
                 {dark ? <Sun size={20} /> : <Moon size={20} />}
@@ -81,7 +90,7 @@ export default function StoreLayout({ children }) {
 
               <Link
                 to="/cart"
-                className="relative hidden md:inline-flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="relative hidden md:inline-flex p-2.5 rounded-full border border-[#ece5df] bg-white hover:border-blush-300 hover:bg-blush-50 dark:bg-gray-800 dark:border-gray-700"
               >
                 <ShoppingCart size={22} />
                 {itemCount > 0 && (
@@ -118,7 +127,7 @@ export default function StoreLayout({ children }) {
 
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-      <footer className="hidden md:block bg-ink-800 text-gray-300 py-12 mt-auto">
+      <footer className="hidden md:block bg-primary-900 text-primary-100 py-14 mt-16">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-white text-lg font-display font-bold mb-4">{storeName}</h3>
@@ -148,7 +157,7 @@ export default function StoreLayout({ children }) {
       </footer>
 
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-ink-100 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-3 inset-x-3 z-50 overflow-hidden rounded-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[#ebe4de] dark:border-gray-700 shadow-float pb-[env(safe-area-inset-bottom)]"
         aria-label="التنقل الرئيسي"
       >
         <div className="flex items-stretch h-16">
