@@ -96,3 +96,5 @@ export default function HomePage() {
     </StoreLayout>
   );
 }
+// import { useQuery } from '@tanstack/react-query';
+// import { storeApi } from '@modules/store/api/store.api';
