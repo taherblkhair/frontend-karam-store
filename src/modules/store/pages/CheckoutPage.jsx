@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { Check, Copy } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { storeApi } from '@modules/store/api/store.api';
@@ -17,6 +18,56 @@ import {
 import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
 import { toOrderItemPayload } from '@modules/store/utils/lineItem.js';
 import { OptimizedThumb } from '@shared/components/OptimizedImage';
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'absolute';
+  input.style.left = '-9999px';
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  document.body.removeChild(input);
+}
+
+function itemVariantLabel(item) {
+  return (
+    item.variant_info ||
+    [item.color_name && `اللون: ${item.color_name}`, item.size_name && `المقاس: ${item.size_name}`]
+      .filter(Boolean)
+      .join(' · ')
+  );
+}
+
+function formatOrderSummaryText(order) {
+  const items = order.items || [];
+  const location = [order.city_name, order.area_name].filter(Boolean).join(' — ');
+  const lines = [
+    `رقم الطلب: ${order.order_number || ''}`,
+    `الاسم: ${order.customer_name || ''}`,
+    `الهاتف: ${order.customer_phone || ''}`,
+    location ? `المدينة / المنطقة: ${location}` : null,
+    order.address ? `العنوان: ${order.address}` : null,
+    '',
+    'المنتجات:',
+    ...items.map((item, index) => {
+      const variant = itemVariantLabel(item);
+      const name = item.product_name || item.name || `منتج ${index + 1}`;
+      return `• ${name}${variant ? ` (${variant})` : ''} — ${item.quantity} × ${formatPrice(item.unit_price ?? item.price)} = ${formatPrice(item.total ?? item.quantity * (item.unit_price ?? item.price))}`;
+    }),
+    '',
+    `المجموع: ${formatPrice(order.subtotal)}`,
+    `الشحن: ${formatPrice(order.shipping_cost)}`,
+    `الإجمالي: ${formatPrice(order.total)}`,
+  ].filter((line) => line !== null);
+
+  return lines.join('\n');
+}
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart } = useCart();
@@ -127,6 +178,7 @@ export default function CheckoutPage() {
       }
       setOrderSuccess({ ...res.data, message: res.message });
       notifySuccess(res);
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       if (user?.role === 'customer') {
         refreshProfile().catch(() => {});
       }
@@ -187,31 +239,13 @@ export default function CheckoutPage() {
   }
 
   if (orderSuccess) {
-    const whatsapp = settingsData?.data?.store_whatsapp || '218910000000';
     return (
       <StoreLayout>
-        <div className="container mx-auto px-4 py-16 text-center max-w-lg">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl">✓</span>
-          </div>
-          <h1 className="text-2xl font-bold mb-2">{orderSuccess.message}</h1>
-          <p className="text-gray-500 mb-4">رقم الطلب:</p>
-          <p className="text-3xl font-bold text-primary-600 mb-6">{orderSuccess.order_number}</p>
-          <p className="text-gray-600 mb-8">سيتم التواصل معك لتأكيد الطلب. الدفع عند الاستلام.</p>
-          <div className="flex flex-col gap-3">
-            <a
-              href={getWhatsAppLink(whatsapp, orderSuccess.order_number)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary"
-            >
-              التواصل مع المتجر عبر WhatsApp
-            </a>
-            <button type="button" onClick={() => navigate('/')} className="btn-outline">
-              العودة للرئيسية
-            </button>
-          </div>
-        </div>
+        <OrderSuccessView
+          order={orderSuccess}
+          whatsapp={settingsData?.data?.store_whatsapp || '218910000000'}
+          onHome={() => navigate('/')}
+        />
       </StoreLayout>
     );
   }
@@ -407,5 +441,178 @@ export default function CheckoutPage() {
         </form>
       </div>
     </StoreLayout>
+  );
+}
+
+function CopyButton({ text, label, copiedLabel = 'تم النسخ', className = '' }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await copyToClipboard(text);
+      setCopied(true);
+      notifySuccess({ message: copiedLabel });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      notifyError({ message: 'تعذر النسخ' });
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={className}
+      aria-label={copied ? copiedLabel : label}
+    >
+      {copied ? <Check size={16} className="shrink-0" /> : <Copy size={16} className="shrink-0" />}
+      <span>{copied ? copiedLabel : label}</span>
+    </button>
+  );
+}
+
+function OrderSuccessView({ order, whatsapp, onHome }) {
+  const items = order.items || [];
+  const location = [order.city_name, order.area_name].filter(Boolean).join(' — ');
+  const summaryText = formatOrderSummaryText(order);
+
+  return (
+    <div className="container mx-auto px-3 sm:px-4 pt-8 sm:pt-12 pb-24 md:pb-12 max-w-2xl">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl sm:text-4xl">✓</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl font-bold mb-1">
+          {order.message || 'تم إنشاء الطلب'}
+        </h1>
+        <p className="text-sm text-ink-500">
+          سيتم التواصل معك لتأكيد الطلب. الدفع عند الاستلام.
+        </p>
+      </div>
+
+      <div className="card p-4 sm:p-6 mb-4">
+        <p className="text-xs text-ink-500 mb-1">رقم الطلب</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-2xl sm:text-3xl font-bold text-primary-600 tabular-nums tracking-wide flex-1 min-w-0 break-all">
+            {order.order_number}
+          </p>
+          <CopyButton
+            text={order.order_number || ''}
+            label="نسخ الرقم"
+            copiedLabel="تم نسخ الرقم"
+            className="btn-outline text-sm shrink-0 px-3 py-2"
+          />
+        </div>
+      </div>
+
+      <div className="card p-4 sm:p-6 mb-4 text-start">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="font-bold">ملخص الطلب</h2>
+          <CopyButton
+            text={summaryText}
+            label="نسخ البيانات"
+            copiedLabel="تم نسخ البيانات"
+            className="btn-outline text-sm px-3 py-2"
+          />
+        </div>
+
+        <dl className="space-y-2.5 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink-500 shrink-0">الاسم</dt>
+            <dd className="font-medium text-end break-words">{order.customer_name || '—'}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink-500 shrink-0">الهاتف</dt>
+            <dd className="font-medium tabular-nums text-end" dir="ltr">
+              {order.customer_phone || '—'}
+            </dd>
+          </div>
+          {location ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-500 shrink-0">المدينة / المنطقة</dt>
+              <dd className="font-medium text-end">{location}</dd>
+            </div>
+          ) : null}
+          {order.address ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-500 shrink-0">العنوان</dt>
+              <dd className="font-medium text-end break-words">{order.address}</dd>
+            </div>
+          ) : null}
+          {order.notes ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-500 shrink-0">ملاحظات</dt>
+              <dd className="font-medium text-end break-words">{order.notes}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        <div className="border-t border-ink-100 dark:border-gray-700 mt-4 pt-4 space-y-3">
+          {items.map((item) => {
+            const variant = itemVariantLabel(item);
+            const name = item.product_name || item.name;
+            const qty = item.quantity;
+            const unit = item.unit_price ?? item.price;
+            const lineTotal = item.total ?? qty * unit;
+            return (
+              <div key={item.id || `${item.product_id}-${item.variant_id}`} className="flex gap-3 text-sm">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-tertiary-100 shrink-0 dark:bg-gray-700">
+                  {item.image ? (
+                    <OptimizedThumb src={item.image} alt={name} className="w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-ink-300">
+                      —
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold line-clamp-2">{name}</p>
+                  {variant ? (
+                    <p className="text-xs font-medium text-primary-600 mt-0.5">{variant}</p>
+                  ) : null}
+                  <p className="text-ink-500 mt-0.5">
+                    {qty} × {formatPrice(unit)}
+                  </p>
+                </div>
+                <span className="font-semibold shrink-0">{formatPrice(lineTotal)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-ink-100 dark:border-gray-700 mt-4 pt-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span>المجموع</span>
+            <span>{formatPrice(order.subtotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>الشحن</span>
+            <span>{formatPrice(order.shipping_cost)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-base">
+            <span>الإجمالي</span>
+            <span className="text-primary-600">{formatPrice(order.total)}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm">
+          الدفع عند الاستلام (COD)
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <a
+          href={getWhatsAppLink(whatsapp, order.order_number)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary"
+        >
+          التواصل مع المتجر عبر WhatsApp
+        </a>
+        <button type="button" onClick={onHome} className="btn-outline">
+          العودة للرئيسية
+        </button>
+      </div>
+    </div>
   );
 }
