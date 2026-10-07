@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '@core/auth/auth.api';
 import { createApiError } from '@shared/utils/apiMessage.js';
+import { readJSON } from '@core/utils/storageGuard';
 
 const AuthContext = createContext(null);
 
@@ -9,10 +10,7 @@ function persistUser(user) {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(() => readJSON('user', null));
   const [loading, setLoading] = useState(false);
 
   const applyAuth = (payload) => {
@@ -34,7 +32,7 @@ export const AuthProvider = ({ children }) => {
     const res = await authApi.me();
     const profile = res.data;
     const next = {
-      ...(JSON.parse(localStorage.getItem('user') || '{}')),
+      ...readJSON('user', {}),
       ...profile,
     };
     persistUser(next);

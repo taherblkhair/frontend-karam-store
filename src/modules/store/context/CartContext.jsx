@@ -1,16 +1,21 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { buildLineItem } from '@modules/store/utils/lineItem.js';
+import { readJSON } from '@core/utils/storageGuard';
 
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
+    const saved = readJSON('cart', []);
+    return Array.isArray(saved) ? saved : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('cart', JSON.stringify(items));
+    } catch {
+      // Storage full/blocked — cart still works for this session.
+    }
   }, [items]);
 
   const addItem = (product, variant = null, quantity = 1) => {
