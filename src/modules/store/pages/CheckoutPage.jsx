@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, CheckCircle2, Copy, X } from 'lucide-react';
-import { notifySuccess, notifyError, dismissNotification } from '@shared/services/toast.service';
+import {
+  notifySuccess,
+  notifyError,
+  notifyWarning,
+  dismissNotification,
+} from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
@@ -19,6 +24,13 @@ import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
 import { toOrderItemPayload } from '@modules/store/utils/lineItem.js';
 import { OptimizedThumb } from '@shared/components/OptimizedImage';
 import { SearchableSelect } from '@modules/store/components/SearchableSelect';
+import QuickFillPanel from '@modules/store/components/QuickFillPanel';
+import {
+  matchOptionInText,
+  normalizeArabic,
+  parseQuickFill,
+  stripMatchedName,
+} from '@modules/store/utils/quickFill';
 
 const PHONE_LENGTH = 10;
 const VALIDATION_TOAST_ID = 'checkout-validation';
@@ -134,6 +146,7 @@ function formatOrderSummaryText(order) {
 export default function CheckoutPage() {
   const { items: cartItems, clearCart } = useCart();
   const { user, register, refreshProfile } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isBuyNow = searchParams.get('mode') === 'buy-now';
@@ -281,6 +294,85 @@ export default function CheckoutPage() {
   const fieldErrorFor = (field) =>
     (clientError?.field === field ? clientError.message : '') || getFieldError(field);
 
+  /** Fills only what was recognised; returns false when nothing could be read. */
+  const handleQuickFill = async (text) => {
+    const toOption = (row) => ({ value: row.id, label: row.name_ar });
+    const cities = (citiesData?.data || []).map(toOption);
+    const cityNames = new Set(
+      cities.flatMap(({ label }) => {
+        const n = normalizeArabic(label);
+        return [n, n.startsWith('ال') ? n.slice(2) : `ال${n}`];
+      })
+    );
+    const parsed = parseQuickFill(text, { isPlace: (s) => cityNames.has(normalizeArabic(s)) });
+
+    const updates = {};
+    if (parsed.name) updates.customer_name = parsed.name;
+    if (parsed.phone) updates.customer_phone = sanitizePhoneInput(parsed.phone);
+
+    let address = parsed.address;
+    let cityAreas = areas.map(toOption);
+    const cityHit = address ? matchOptionInText(cities, address) : null;
+    if (cityHit) {
+      const cityId = String(cityHit.option.value);
+      address = stripMatchedName(address, cityHit.needle);
+      if (cityId !== String(form.city_id)) {
+        updates.city_id = cityId;
+        updates.area_id = '';
+        try {
+          const res = await queryClient.fetchQuery({
+            queryKey: ['areas', cityId],
+            queryFn: () => storeApi.areas(cityId),
+          });
+          cityAreas = (res?.data || []).map(toOption);
+        } catch {
+          cityAreas = [];
+        }
+      }
+    }
+    const areaHit = address && cityAreas.length ? matchOptionInText(cityAreas, address) : null;
+    if (areaHit) {
+      updates.area_id = String(areaHit.option.value);
+      address = stripMatchedName(address, areaHit.needle);
+    }
+    if (parsed.address) updates.address = address || parsed.address;
+
+    if (Object.keys(updates).length === 0) {
+      notifyError({
+        message: 'تعذر التعرف على البيانات. اكتب الاسم والهاتف والعنوان كلٌ في سطر ثم حاول مجدداً',
+      });
+      return false;
+    }
+
+    const next = { ...form, ...updates };
+    setForm(next);
+    clearErrors();
+    dismissNotification(VALIDATION_TOAST_ID);
+
+    const ctx = { ...validationCtx, areasRequired: cityAreas.length > 0, areasLoading: false };
+    const missing = DELIVERY_RULES.filter(([field]) => field !== 'password')
+      .map(([field, rule]) => ({ field, message: rule(next, ctx) }))
+      .filter((r) => r.message);
+
+    if (missing.length === 0) {
+      setClientError(null);
+      notifySuccess({ message: 'تمت تعبئة البيانات بنجاح! يرجى التأكد من صحتها' });
+      return true;
+    }
+
+    const labels = { customer_name: 'الاسم', customer_phone: 'رقم الهاتف', city_id: 'المدينة', area_id: 'المنطقة' };
+    setClientError(missing[0]);
+    notifyWarning(
+      `تمت تعبئة البيانات التي تم التعرف عليها. يرجى إكمال: ${missing.map((m) => labels[m.field]).join('، ')}`
+    );
+    requestAnimationFrame(() => {
+      const el = fieldRefs[missing[0].field]?.current;
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el?.focus?.({ preventScroll: true });
+    });
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearErrors();
@@ -387,6 +479,7 @@ export default function CheckoutPage() {
                   </span>
                 )}
               </div>
+              <QuickFillPanel onApply={handleQuickFill} />
               <div className="space-y-4">
                 <div>
                   <label htmlFor="checkout-name" className="block text-sm font-medium mb-1.5">

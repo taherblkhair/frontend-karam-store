@@ -7,6 +7,10 @@ export function notifySuccess(response, fallback = 'تم بنجاح') {
   if (message) toast.success(message);
 }
 
+export function notifyWarning(message, options = {}) {
+  toast(message, { icon: '⚠️', duration: 5000, ...options });
+}
+
 export function dismissNotification(id) {
   toast.dismiss(id);
 }
