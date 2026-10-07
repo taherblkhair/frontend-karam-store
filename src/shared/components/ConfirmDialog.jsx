@@ -50,7 +50,7 @@ export function ConfirmDialog({
             </div>
             <div className="min-w-0">
               <h2 id="confirm-title" className="text-lg font-bold mb-1">{title}</h2>
-              <p id="confirm-message" className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p id="confirm-message" className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                 {message}
               </p>
             </div>

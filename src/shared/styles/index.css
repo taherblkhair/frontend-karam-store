@@ -102,6 +102,11 @@
   55% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
   75%, 100% { transform: translateY(10px) scale(0.4); opacity: 0; }
 }
+@keyframes karam-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
 
 @layer utilities {
   .safe-pb {

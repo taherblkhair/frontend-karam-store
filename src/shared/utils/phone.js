@@ -17,6 +17,18 @@ export function normalizeLibyaPhone(input) {
   return digits;
 }
 
+/** Digits only, max 10 — but let +218 / 00218 pasted numbers through so they normalize to 09xxxxxxxx. */
+export function sanitizePhoneInput(raw) {
+  const digits = String(raw || '')
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/\D/g, '');
+  if (digits.startsWith('00218') || digits.startsWith('218')) {
+    const normalized = normalizeLibyaPhone(digits);
+    return normalized.startsWith('0') ? normalized.slice(0, 10) : digits.slice(0, 14);
+  }
+  return digits.slice(0, 10);
+}
+
 export function isValidLibyaMobile(input) {
   if (input == null || String(input).trim() === '') return false;
   const phone = normalizeLibyaPhone(input);

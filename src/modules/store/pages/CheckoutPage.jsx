@@ -18,6 +18,7 @@ import { formatPrice, getWhatsAppLink } from '@core/constants';
 import {
   isValidLibyaMobile,
   normalizeLibyaPhone,
+  sanitizePhoneInput,
   LIBYA_PHONE_MESSAGE,
 } from '@shared/utils/phone';
 import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
@@ -25,25 +26,10 @@ import { toOrderItemPayload } from '@modules/store/utils/lineItem.js';
 import { OptimizedThumb } from '@shared/components/OptimizedImage';
 import { SearchableSelect } from '@modules/store/components/SearchableSelect';
 import QuickFillPanel from '@modules/store/components/QuickFillPanel';
-import {
-  matchOptionInText,
-  normalizeArabic,
-  parseQuickFill,
-  stripMatchedName,
-} from '@modules/store/utils/quickFill';
+import { resolveQuickFill } from '@modules/store/utils/quickFill';
 
 const PHONE_LENGTH = 10;
 const VALIDATION_TOAST_ID = 'checkout-validation';
-
-/** Digits only, max 10 — but let +218 / 00218 pasted numbers through so they normalize to 09xxxxxxxx. */
-function sanitizePhoneInput(raw) {
-  const digits = String(raw || '').replace(/\D/g, '');
-  if (digits.startsWith('00218') || digits.startsWith('218')) {
-    const normalized = normalizeLibyaPhone(digits);
-    return normalized.startsWith('0') ? normalized.slice(0, PHONE_LENGTH) : digits.slice(0, 14);
-  }
-  return digits.slice(0, PHONE_LENGTH);
-}
 
 function phoneError(value) {
   const phone = normalizeLibyaPhone(value);
@@ -297,45 +283,25 @@ export default function CheckoutPage() {
   /** Fills only what was recognised; returns false when nothing could be read. */
   const handleQuickFill = async (text) => {
     const toOption = (row) => ({ value: row.id, label: row.name_ar });
-    const cities = (citiesData?.data || []).map(toOption);
-    const cityNames = new Set(
-      cities.flatMap(({ label }) => {
-        const n = normalizeArabic(label);
-        return [n, n.startsWith('ال') ? n.slice(2) : `ال${n}`];
-      })
-    );
-    const parsed = parseQuickFill(text, { isPlace: (s) => cityNames.has(normalizeArabic(s)) });
+    const { updates: parsed, areas: cityAreas } = await resolveQuickFill(text, {
+      cities: (citiesData?.data || []).map(toOption),
+      currentCityId: form.city_id,
+      currentAreas: areas.map(toOption),
+      loadAreas: async (cityId) => {
+        const res = await queryClient.fetchQuery({
+          queryKey: ['areas', cityId],
+          queryFn: () => storeApi.areas(cityId),
+        });
+        return (res?.data || []).map(toOption);
+      },
+    });
 
     const updates = {};
     if (parsed.name) updates.customer_name = parsed.name;
     if (parsed.phone) updates.customer_phone = sanitizePhoneInput(parsed.phone);
-
-    let address = parsed.address;
-    let cityAreas = areas.map(toOption);
-    const cityHit = address ? matchOptionInText(cities, address) : null;
-    if (cityHit) {
-      const cityId = String(cityHit.option.value);
-      address = stripMatchedName(address, cityHit.needle);
-      if (cityId !== String(form.city_id)) {
-        updates.city_id = cityId;
-        updates.area_id = '';
-        try {
-          const res = await queryClient.fetchQuery({
-            queryKey: ['areas', cityId],
-            queryFn: () => storeApi.areas(cityId),
-          });
-          cityAreas = (res?.data || []).map(toOption);
-        } catch {
-          cityAreas = [];
-        }
-      }
-    }
-    const areaHit = address && cityAreas.length ? matchOptionInText(cityAreas, address) : null;
-    if (areaHit) {
-      updates.area_id = String(areaHit.option.value);
-      address = stripMatchedName(address, areaHit.needle);
-    }
-    if (parsed.address) updates.address = address || parsed.address;
+    if ('city_id' in parsed) updates.city_id = parsed.city_id;
+    if ('area_id' in parsed) updates.area_id = parsed.area_id;
+    if (parsed.address) updates.address = parsed.address;
 
     if (Object.keys(updates).length === 0) {
       notifyError({

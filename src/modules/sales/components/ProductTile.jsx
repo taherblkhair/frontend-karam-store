@@ -1,7 +1,7 @@
 import { formatPrice } from '@core/constants';
 import { ProductThumb } from './ProductThumb';
 
-export function ProductTile({ product, onSelect, loading }) {
+export function ProductTile({ product, onSelect, loading, inCart = 0 }) {
   const stock = product.total_stock ?? 0;
   const outOfStock = stock <= 0;
 
@@ -13,7 +13,9 @@ export function ProductTile({ product, onSelect, loading }) {
       className={`group text-right rounded-xl border overflow-hidden transition bg-white dark:bg-gray-800 ${
         outOfStock
           ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700'
-          : 'border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:shadow-md active:scale-[0.98]'
+          : inCart
+            ? 'border-primary-500 ring-1 ring-primary-500 hover:shadow-md active:scale-[0.98]'
+            : 'border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:shadow-md active:scale-[0.98]'
       }`}
     >
       <div className="aspect-square relative overflow-hidden bg-gray-50 dark:bg-gray-700">
@@ -34,6 +36,11 @@ export function ProductTile({ product, onSelect, loading }) {
         ) : (
           <span className="absolute top-2 left-2 text-[11px] font-medium px-2 py-0.5 rounded-md bg-black/60 text-white">
             {stock}
+          </span>
+        )}
+        {inCart > 0 && (
+          <span className="absolute right-2 top-2 rounded-md bg-primary-600 px-2 py-0.5 text-[11px] font-bold text-secondary-400 shadow">
+            في السلة ×{inCart}
           </span>
         )}
       </div>

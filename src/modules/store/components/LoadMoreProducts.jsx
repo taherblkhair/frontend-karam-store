@@ -44,7 +44,16 @@ export function useInfiniteProducts(
  * «مشاهدة المزيد» footer: button + automatic loading when the shopper
  * scrolls near the end of the grid.
  */
-export function LoadMoreFooter({ hasNextPage, isFetchingNextPage, fetchNextPage, shown, total, autoLoad = true }) {
+export function LoadMoreFooter({
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+  shown,
+  total,
+  autoLoad = true,
+  batchSize = PRODUCTS_BATCH_SIZE,
+  className = 'mt-10',
+}) {
   const sentinelRef = useRef(null);
 
   useEffect(() => {
@@ -62,9 +71,9 @@ export function LoadMoreFooter({ hasNextPage, isFetchingNextPage, fetchNextPage,
 
   if (!hasNextPage) {
     // A short single-batch result needs no "end of list" note.
-    if (shown <= PRODUCTS_BATCH_SIZE && !(total > PRODUCTS_BATCH_SIZE)) return null;
+    if (shown <= batchSize && !(total > batchSize)) return null;
     return (
-      <p className="mt-10 flex items-center justify-center gap-2 text-sm font-medium text-ink-400" role="status">
+      <p className={`${className} flex items-center justify-center gap-2 text-sm font-medium text-ink-400`} role="status">
         <CheckCircle2 size={16} className="text-primary-600" aria-hidden />
         تم عرض جميع المنتجات
       </p>
@@ -74,7 +83,7 @@ export function LoadMoreFooter({ hasNextPage, isFetchingNextPage, fetchNextPage,
   const progress = total ? Math.min(100, Math.round((shown / total) * 100)) : null;
 
   return (
-    <div ref={sentinelRef} className="mt-10 flex flex-col items-center gap-3">
+    <div ref={sentinelRef} className={`${className} flex flex-col items-center gap-3`}>
       {total != null && (
         <div className="w-full max-w-[14rem] text-center">
           <p className="text-xs text-ink-400">

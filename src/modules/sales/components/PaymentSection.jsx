@@ -1,83 +1,37 @@
-import { CreditCard, MapPin } from 'lucide-react';
+import { CreditCard, Loader2 } from 'lucide-react';
 import { formatPrice } from '@core/constants';
 
 export function PaymentSection({
-  customerName,
-  setCustomerName,
-  customerPhone,
-  setCustomerPhone,
-  cityId,
-  setCityId,
-  areaText,
-  setAreaText,
-  cities = [],
   discount,
   setDiscount,
   subtotal,
   total,
+  itemCount = 0,
   onSale,
   isPending,
   cartEmpty,
 }) {
   return (
-    <div className="border-t dark:border-gray-700 p-4 space-y-3 bg-white dark:bg-gray-800">
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input text-sm"
-          placeholder="اسم العميل"
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-        />
-        <input
-          className="input text-sm"
-          placeholder="الهاتف"
-          value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <MapPin size={12} />
-          <span>التوصيل (اختياري)</span>
-        </div>
-        <select
-          className="input text-sm"
-          value={cityId}
-          onChange={(e) => setCityId(e.target.value)}
-        >
-          <option value="">المدينة — اختياري</option>
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>{c.name_ar}</option>
-          ))}
-        </select>
-        <input
-          className="input text-sm"
-          placeholder="المنطقة — اختياري (مثال: قرقارش)"
-          value={areaText}
-          onChange={(e) => setAreaText(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2 text-sm">
+    <div className="shrink-0 space-y-2.5 border-t bg-white p-3 sm:p-4 dark:border-gray-700 dark:bg-gray-800 safe-pb">
+      <div className="space-y-1.5 text-sm">
         <div className="flex justify-between text-gray-600 dark:text-gray-300">
-          <span>المجموع</span>
-          <span>{formatPrice(subtotal)}</span>
+          <span>المجموع{itemCount ? ` (${itemCount} قطعة)` : ''}</span>
+          <span className="tabular-nums">{formatPrice(subtotal)}</span>
         </div>
-        <div className="flex justify-between items-center gap-3">
-          <span className="text-gray-600 dark:text-gray-300">خصم</span>
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="pos-discount" className="text-gray-600 dark:text-gray-300">خصم</label>
           <input
+            id="pos-discount"
             type="number"
+            inputMode="decimal"
             min="0"
             max={subtotal}
-            className="input w-28 text-left text-sm py-1.5"
-            value={discount}
+            className="input h-9 w-28 py-1.5 text-left text-sm tabular-nums"
+            value={discount || ''}
+            placeholder="0"
+            disabled={cartEmpty}
             onChange={(e) => setDiscount(Math.min(subtotal, Math.max(0, parseFloat(e.target.value) || 0)))}
           />
-        </div>
-        <div className="flex justify-between items-center pt-2 border-t dark:border-gray-700">
-          <span className="font-bold text-base">الإجمالي</span>
-          <span className="font-bold text-xl text-primary-600">{formatPrice(total)}</span>
         </div>
       </div>
 
@@ -85,10 +39,13 @@ export function PaymentSection({
         type="button"
         onClick={onSale}
         disabled={isPending || cartEmpty}
-        className="btn-primary w-full py-3.5 text-base"
+        className="btn-primary w-full justify-between py-3.5 text-base"
       >
-        <CreditCard size={20} />
-        {isPending ? 'جاري الدفع...' : 'دفع نقداً'}
+        <span className="inline-flex items-center gap-2">
+          {isPending ? <Loader2 size={20} className="animate-spin" /> : <CreditCard size={20} />}
+          {isPending ? 'جاري الدفع...' : 'دفع نقداً'}
+        </span>
+        <span className="text-lg font-bold tabular-nums text-secondary-400">{formatPrice(total)}</span>
       </button>
     </div>
   );

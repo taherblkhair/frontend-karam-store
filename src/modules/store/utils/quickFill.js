@@ -101,6 +101,52 @@ export function matchOptionInText(options, text) {
   return best;
 }
 
+/**
+ * Full quick-fill pipeline: parse the text, pick city/area from the real lists and
+ * keep only the leftover part as the detailed address.
+ * `cities` / `currentAreas` are `{ value, label }` options; `loadAreas(cityId)` resolves to options.
+ * Returns `{ updates, areas }` — `updates` holds only the recognised keys
+ * (`name`, `phone`, `city_id`, `area_id`, `address`), `areas` the options of the resulting city.
+ */
+export async function resolveQuickFill(text, { cities = [], currentCityId = '', currentAreas = [], loadAreas }) {
+  const cityNames = new Set(
+    cities.flatMap(({ label }) => {
+      const n = normalizeArabic(label);
+      return [n, n.startsWith('ال') ? n.slice(2) : `ال${n}`];
+    })
+  );
+  const parsed = parseQuickFill(text, { isPlace: (s) => cityNames.has(normalizeArabic(s)) });
+
+  const updates = {};
+  if (parsed.name) updates.name = parsed.name;
+  if (parsed.phone) updates.phone = parsed.phone;
+
+  let address = parsed.address;
+  let areas = currentAreas;
+  const cityHit = address ? matchOptionInText(cities, address) : null;
+  if (cityHit) {
+    const cityId = String(cityHit.option.value);
+    address = stripMatchedName(address, cityHit.needle);
+    if (cityId !== String(currentCityId)) {
+      updates.city_id = cityId;
+      updates.area_id = '';
+      try {
+        areas = (await loadAreas?.(cityId)) || [];
+      } catch {
+        areas = [];
+      }
+    }
+  }
+  const areaHit = address && areas.length ? matchOptionInText(areas, address) : null;
+  if (areaHit) {
+    updates.area_id = String(areaHit.option.value);
+    address = stripMatchedName(address, areaHit.needle);
+  }
+  if (parsed.address) updates.address = address || parsed.address;
+
+  return { updates, areas };
+}
+
 /** Removes a matched city/area name from the address so it isn't repeated there. */
 export function stripMatchedName(address, needle) {
   if (!needle) return address;
