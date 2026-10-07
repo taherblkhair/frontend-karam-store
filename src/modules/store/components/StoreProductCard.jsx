@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Eye, Heart, Loader2, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatPrice } from '@core/constants';
-import { OptimizedImage, OptimizedThumb } from '@shared/components/OptimizedImage';
+import { OptimizedImage } from '@shared/components/OptimizedImage';
+import { notifyError, notifySuccess } from '@shared/services/toast.service';
+import { storeApi } from '@modules/store/api/store.api';
+import { useCart } from '@modules/store/context/CartContext';
 import { productPath } from '@modules/store/utils/productPaths';
+import { QuickBuyModal } from '@modules/store/components/QuickBuyModal';
 
 const WISHLIST_KEY = 'karam-wishlist-ids';
-/** Max thumbnail chips — rest still available on product page */
-const MAX_VISIBLE_THUMBS = 5;
 
 function readWishlist() {
   try {
@@ -103,10 +106,33 @@ export function buildCardImageGallery(product) {
   }));
 }
 
+const SWIPE_THRESHOLD = 40;
+
+function CardIconButton({ label, onClick, pressed, disabled, busy, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || busy}
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      aria-busy={busy || undefined}
+      className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border transition active:scale-95 ${
+        pressed
+          ? 'border-primary-600 bg-primary-50 text-primary-600 dark:bg-primary-900/30'
+          : 'border-ink-100 bg-white text-ink-600 hover:border-primary-600 hover:bg-primary-600 hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
+      } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-ink-100 disabled:hover:bg-white disabled:hover:text-ink-600`}
+    >
+      {busy ? <Loader2 size={17} className="animate-spin" /> : children}
+    </button>
+  );
+}
+
 /**
  * Unified storefront product card:
- * main photo · variant thumbs · badge · price
- * Images are lazy-loaded thumbs (400w) to keep homepage fast.
+ * swipeable photos · quick actions (view / wishlist / cart) · name · price · «عرض الصنف».
+ * The lean list payload has no variants, so quick actions load the full product on demand.
  */
 export function StoreProductCard({
   product,
@@ -116,17 +142,27 @@ export function StoreProductCard({
   priority = false,
   className = '',
 }) {
+  const queryClient = useQueryClient();
+  const { addItem } = useCart();
   const { isSaved, toggle } = useWishlist();
-  const gallery = useMemo(() => buildCardImageGallery(product), [product]);
+  const gallery = useMemo(() => {
+    const all = buildCardImageGallery(product);
+    return showVariantImages ? all : all.slice(0, 1);
+  }, [product, showVariantImages]);
   const outOfStock = product.total_stock != null && Number(product.total_stock) <= 0;
-  const defaultKey = (outOfStock ? null : gallery.find((g) => !g.unavailable)?.key) || gallery[0]?.key || null;
-  const [activeKey, setActiveKey] = useState(defaultKey);
+  const defaultIndex = Math.max(0, outOfStock ? 0 : gallery.findIndex((g) => !g.unavailable));
+  const [index, setIndex] = useState(defaultIndex);
+  const [busyAction, setBusyAction] = useState(null);
+  const [modalProduct, setModalProduct] = useState(null);
+  const touchRef = useRef(null);
+  const swipedRef = useRef(false);
 
   useEffect(() => {
-    setActiveKey(defaultKey);
+    setIndex(defaultIndex);
   }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const active = gallery.find((g) => g.key === activeKey) || gallery[0] || null;
+  const count = gallery.length;
+  const active = gallery[index] || gallery[0] || null;
   const image = active?.image || null;
   const activeUnavailable = !outOfStock && Boolean(active?.unavailable);
   const href = productPath(product);
@@ -140,15 +176,76 @@ export function StoreProductCard({
     (showNewBadge || product.is_new ? 'جديد' : null) ||
     (hasDiscount ? 'عرض' : null);
 
-  const thumbs = showVariantImages ? gallery.slice(0, MAX_VISIBLE_THUMBS) : [];
-  const showThumbs = thumbs.length > 1;
+  const go = (step) => setIndex((i) => (i + step + count) % count);
+
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY };
+    swipedRef.current = false;
+  };
+  const onTouchEnd = (e) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start || count < 2) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(t.clientY - start.y)) return;
+    swipedRef.current = true;
+    // RTL: dragging toward the right reveals the next photo.
+    go(dx > 0 ? 1 : -1);
+  };
+
+  const loadFullProduct = () =>
+    queryClient
+      .fetchQuery({
+        queryKey: ['product', product.slug],
+        queryFn: () => storeApi.productBySlug(product.slug),
+        staleTime: 60_000,
+      })
+      .then((res) => res?.data);
+
+  const runQuickAction = async (action) => {
+    if (busyAction) return;
+    setBusyAction(action);
+    try {
+      const full = await loadFullProduct();
+      if (!full) throw new Error('missing');
+      const variants = full.variants || [];
+      if (action === 'cart' && variants.length === 0) {
+        const result = addItem(full, null, 1);
+        if (result?.ok) notifySuccess({ message: `تمت إضافة «${full.name_ar}» إلى السلة` });
+        else notifyError({ message: result?.message });
+        return;
+      }
+      setModalProduct(full);
+    } catch {
+      notifyError({ message: 'تعذر تحميل المنتج، حاول مرة أخرى' });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const closeModal = useCallback(() => setModalProduct(null), []);
 
   return (
-    <article className={`group flex flex-col ${className}`}>
-      <div className="relative overflow-hidden rounded-xl bg-tertiary-100 ring-1 ring-black/[0.04]">
+    <article
+      className={`group flex flex-col rounded-2xl border border-ink-100/80 bg-white p-2 shadow-sm transition hover:border-primary-600/25 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 ${className}`}
+    >
+      <div
+        className="relative overflow-hidden rounded-xl bg-tertiary-100 ring-1 ring-black/[0.04]"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <Link
           to={href}
+          onClick={(e) => {
+            if (swipedRef.current) {
+              e.preventDefault();
+              swipedRef.current = false;
+            }
+          }}
           className="block aspect-[4/5] overflow-hidden bg-tertiary-200"
+          draggable={false}
         >
           {image ? (
             <OptimizedImage
@@ -173,113 +270,101 @@ export function StoreProductCard({
           )}
         </Link>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggle(product.id);
-          }}
-          aria-label={saved ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
-          aria-pressed={saved}
-          className="absolute top-2.5 left-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-sm ring-1 ring-black/5 transition hover:scale-105 hover:text-primary-600"
-        >
-          <Heart
-            size={18}
-            strokeWidth={2}
-            className={saved ? 'fill-primary-600 text-primary-600' : ''}
-          />
-        </button>
+        {count > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="الصورة السابقة"
+              className="absolute right-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-sm ring-1 ring-black/5 transition hover:bg-white hover:text-primary-600 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="الصورة التالية"
+              className="absolute left-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-sm ring-1 ring-black/5 transition hover:bg-white hover:text-primary-600 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center gap-1" aria-hidden>
+              {gallery.slice(0, 6).map((g, i) => (
+                <span
+                  key={g.key}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === index ? 'w-4 bg-primary-600' : 'w-1.5 bg-white/90 ring-1 ring-black/10'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
-        <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
+        <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
           {outOfStock || activeUnavailable ? (
             <span className="rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
               {activeUnavailable && active?.color_name ? `${active.color_name} غير متوفر` : 'غير متوفر'}
             </span>
           ) : label ? (
-            <span className="rounded-md bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink-800 shadow-sm ring-1 ring-black/5">
+            <span className="rounded-md bg-secondary-400 px-2 py-0.5 text-[11px] font-bold text-primary-900 shadow-sm">
               {label}
             </span>
           ) : null}
         </div>
       </div>
 
-      {showThumbs && (
-        <div
-          className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none"
-          role="listbox"
-          aria-label="صور المتغيرات"
+      <div className="mt-2 flex items-center justify-center gap-2.5" role="group" aria-label="إجراءات سريعة">
+        <CardIconButton label="عرض سريع" onClick={() => runQuickAction('view')} busy={busyAction === 'view'}>
+          <Eye size={17} />
+        </CardIconButton>
+        <CardIconButton
+          label={saved ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+          onClick={() => toggle(product.id)}
+          pressed={saved}
         >
-          {thumbs.map((item) => {
-            const selected = item.key === (active?.key || gallery[0]?.key);
-            return (
-              <button
-                key={item.key}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                title={
-                  item.unavailable && !outOfStock
-                    ? `${item.color_name || 'هذا الخيار'} — غير متوفر`
-                    : item.color_name || 'صورة المنتج'
-                }
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setActiveKey(item.key);
-                }}
-                onMouseEnter={() => {
-                  // Desktop: preview without blocking scroll jank
-                  if (window.matchMedia('(hover: hover)').matches) {
-                    setActiveKey(item.key);
-                  }
-                }}
-                className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded-md transition ${
-                  selected
-                    ? 'ring-2 ring-primary-600 ring-offset-1'
-                    : 'ring-1 ring-ink-100 opacity-85 hover:opacity-100'
-                }`}
-              >
-                <OptimizedThumb
-                  src={item.image}
-                  alt={item.color_name || ''}
-                  className={`h-full w-full ${item.unavailable && !outOfStock ? 'opacity-40 grayscale' : ''}`}
-                  imgClassName="object-cover"
-                />
-                {item.unavailable && !outOfStock && (
-                  <span
-                    className="pointer-events-none absolute left-1/2 top-1/2 h-[1.5px] w-[130%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-ink-600/70"
-                    aria-hidden
-                  />
-                )}
-                {item.hex_code && (
-                  <span
-                    className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full border border-white shadow-sm"
-                    style={{ backgroundColor: item.hex_code }}
-                    aria-hidden
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+          <Heart size={17} className={saved ? 'fill-primary-600' : ''} />
+        </CardIconButton>
+        <CardIconButton
+          label={outOfStock ? 'غير متوفر' : 'أضف إلى السلة'}
+          onClick={() => runQuickAction('cart')}
+          disabled={outOfStock}
+          busy={busyAction === 'cart'}
+        >
+          <ShoppingCart size={17} />
+        </CardIconButton>
+      </div>
 
-      <Link to={href} className="mt-2.5 block px-0.5 text-start flex-1">
-        <h3 className="font-display text-[15px] sm:text-base font-bold text-ink-800 leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
+      <Link to={href} className="mt-2 block flex-1 px-1 text-start">
+        <h3 className="font-display text-sm sm:text-[15px] font-bold text-ink-800 leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors dark:text-gray-100">
           {product.name_ar}
         </h3>
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
-          <p className="text-sm sm:text-[15px] font-medium text-ink-500">
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <p className="text-base sm:text-lg font-extrabold tabular-nums text-primary-600 dark:text-primary-300">
             {formatPrice(product.price)}
           </p>
           {hasDiscount && (
-            <p className="text-xs text-ink-300 line-through">
+            <p className="text-xs text-ink-300 line-through tabular-nums">
               {formatPrice(product.compare_price)}
             </p>
           )}
         </div>
       </Link>
+
+      <Link
+        to={href}
+        className="mt-2.5 flex h-10 w-full items-center justify-center rounded-xl border border-primary-600 text-sm font-bold text-primary-600 transition hover:bg-primary-600 hover:text-white active:scale-[0.99] dark:border-primary-400 dark:text-primary-300"
+      >
+        عرض الصنف
+      </Link>
+
+      <QuickBuyModal
+        product={modalProduct}
+        open={Boolean(modalProduct)}
+        onClose={closeModal}
+        isSaved={isSaved}
+        onToggleWishlist={toggle}
+      />
     </article>
   );
 }

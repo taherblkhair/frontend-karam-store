@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
 import { BrandLogo } from '@shared/components/BrandLogo';
-import { storeApi } from '@modules/store/api/store.api';
+import {
+  LoadMoreFooter,
+  ProductCardSkeletons,
+  useInfiniteProducts,
+} from '@modules/store/components/LoadMoreProducts';
 import {
   StoreSearchField,
   brandNames,
   useStoreBrands,
 } from '@modules/store/components/BrandTile';
 
-const PAGE_SIZE = 24;
 const SEARCH_DEBOUNCE_MS = 300;
 
 function decodeSlug(raw) {
@@ -27,7 +29,6 @@ export default function BrandPage() {
   const slug = decodeSlug(rawSlug);
   const [params, setParams] = useSearchParams();
   const query = params.get('q') || '';
-  const page = Math.max(1, parseInt(params.get('page'), 10) || 1);
   const [searchInput, setSearchInput] = useState(query);
 
   const { data: brands = [], isLoading: brandsLoading } = useStoreBrands();
@@ -50,26 +51,19 @@ export default function BrandPage() {
     return () => clearTimeout(t);
   }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data: productsData, isLoading: productsLoading, isFetching } = useQuery({
-    queryKey: ['brand-products', brand?.id, query, page],
-    queryFn: () =>
-      storeApi.products({
-        brand: brand.id,
-        search: query || undefined,
-        page,
-        limit: PAGE_SIZE,
-      }),
-    enabled: Boolean(brand?.id),
-    placeholderData: (prev) => prev,
-  });
-
-  const goToPage = (n) => {
-    const next = new URLSearchParams(params);
-    if (n > 1) next.set('page', String(n));
-    else next.delete('page');
-    setParams(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const {
+    products,
+    total,
+    isLoading: productsLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteProducts(
+    ['brand-products'],
+    { brand: brand?.id, search: query || undefined },
+    { enabled: Boolean(brand?.id), keepPrevious: true }
+  );
 
   if (brandsLoading) {
     return (
@@ -93,8 +87,6 @@ export default function BrandPage() {
   }
 
   const { primary, secondary } = brandNames(brand);
-  const products = productsData?.data || [];
-  const pagination = productsData?.pagination;
   const searching = Boolean(query);
 
   return (
@@ -128,8 +120,8 @@ export default function BrandPage() {
         <div className="mb-4 flex flex-col gap-3 border-t border-ink-100 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
           <h2 className="text-base sm:text-lg font-bold text-ink-700 dark:text-gray-200">
             منتجات <bdi>{primary}</bdi>
-            {searching && pagination?.total != null && (
-              <span className="font-medium text-ink-400"> · {pagination.total} نتيجة</span>
+            {searching && total != null && (
+              <span className="font-medium text-ink-400"> · {total} نتيجة</span>
             )}
           </h2>
           <StoreSearchField
@@ -161,31 +153,21 @@ export default function BrandPage() {
           <>
             <div
               className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 transition-opacity ${
-                isFetching ? 'opacity-60' : ''
+                isFetching && !isFetchingNextPage ? 'opacity-60' : ''
               }`}
             >
               {products.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
+              {isFetchingNextPage && <ProductCardSkeletons count={4} />}
             </div>
-            {pagination && pagination.pages > 1 && (
-              <div className="flex flex-wrap justify-center gap-2 mt-8">
-                {Array.from({ length: pagination.pages }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => goToPage(i + 1)}
-                    className={`min-w-[2.5rem] px-3 py-2 rounded-full text-sm font-medium transition ${
-                      pagination.page === i + 1
-                        ? 'bg-primary-600 text-white shadow-sm'
-                        : 'bg-white border border-ink-100 text-ink-800 hover:border-primary-600/40'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
+            <LoadMoreFooter
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              fetchNextPage={fetchNextPage}
+              shown={products.length}
+              total={total}
+            />
           </>
         )}
       </div>

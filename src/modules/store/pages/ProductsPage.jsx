@@ -11,6 +11,11 @@ import {
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
+import {
+  LoadMoreFooter,
+  ProductCardSkeletons,
+  useInfiniteProducts,
+} from '@modules/store/components/LoadMoreProducts';
 
 const FILTERS_STORAGE_KEY = 'store-filters-open';
 
@@ -209,7 +214,6 @@ export default function ProductsPage() {
     is_new: params.get('is_new') || '',
     featured: params.get('featured') || '',
     sort: SORT_PRESETS[sortKey] ? sortKey : 'newest',
-    page: params.get('page') || '1',
     sortBy: sortPreset.sortBy,
     sortOrder: sortPreset.sortOrder,
   };
@@ -236,17 +240,21 @@ export default function ProductsPage() {
       size: filters.size || undefined,
       is_new: filters.is_new || undefined,
       featured: filters.featured || undefined,
-      page: filters.page,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
     }),
-    [filters]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [params]
   );
 
-  const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', queryParams],
-    queryFn: () => storeApi.products(queryParams),
-  });
+  const {
+    products,
+    total,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteProducts(['products'], queryParams);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -273,7 +281,7 @@ export default function ProductsPage() {
     } else {
       newParams.delete(key);
     }
-    if (key !== 'page') newParams.set('page', '1');
+    newParams.delete('page');
     setParams(newParams);
   };
 
@@ -284,8 +292,6 @@ export default function ProductsPage() {
   const closeFilters = () => setFiltersOpen(false);
   const toggleFilters = () => setFiltersOpen((v) => !v);
 
-  const products = productsData?.data || [];
-  const pagination = productsData?.pagination;
   const categories = categoriesData?.data || [];
   const activeCategory = categories.find(
     (c) => String(c.id) === String(filters.category)
@@ -316,9 +322,9 @@ export default function ProductsPage() {
             <h1 className="text-2xl sm:text-3xl text-primary-600">
               {pageHeading}
             </h1>
-            {pagination?.total != null && (
+            {total != null && (
               <p className="text-sm text-ink-400 mt-1">
-                {pagination.total} منتج
+                {total} منتج
                 {activeCategory ? (
                   <span className="text-ink-500">
                     {' '}
@@ -467,25 +473,15 @@ export default function ProductsPage() {
                   {products.map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
+                  {isFetchingNextPage && <ProductCardSkeletons count={6} />}
                 </div>
-                {pagination && pagination.pages > 1 && (
-                  <div className="flex flex-wrap justify-center gap-2 mt-8">
-                    {Array.from({ length: pagination.pages }, (_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => updateFilter('page', String(i + 1))}
-                        className={`min-w-[2.5rem] px-3 py-2 rounded-full text-sm font-medium transition ${
-                          pagination.page === i + 1
-                            ? 'bg-primary-600 text-white shadow-sm'
-                            : 'bg-white border border-ink-100 text-ink-800 hover:border-primary-600/40'
-                        }`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <LoadMoreFooter
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  fetchNextPage={fetchNextPage}
+                  shown={products.length}
+                  total={total}
+                />
               </>
             )}
           </div>
