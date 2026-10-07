@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Minus, Plus, Link2, Check, Zap } from 'lucide-react';
@@ -11,6 +11,7 @@ import { ProductDetailAccordions } from '@modules/store/components/ProductDetail
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { useCart } from '@modules/store/context/CartContext';
 import { startBuyNow } from '@modules/store/utils/buyNow';
+import { flyToCart } from '@modules/store/utils/flyToCart';
 import {
   decodeProductSlug,
   productAbsoluteUrl,
@@ -114,6 +115,7 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [linkCopied, setLinkCopied] = useState(false);
+  const galleryRef = useRef(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -238,13 +240,16 @@ export default function ProductDetailPage() {
     return true;
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e) => {
     if (!ensureVariant()) return;
     const result = addItem(product, selectedVariant, quantity);
     if (!result?.ok) {
       notifyError({ message: result?.message });
       return;
     }
+    flyToCart(galleryRef.current?.querySelector('[aria-roledescription="carousel"]'), {
+      fallbackEl: e?.currentTarget,
+    });
     notifySuccess({ message: result?.message || 'تمت الإضافة للسلة' });
   };
 
@@ -376,7 +381,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 lg:gap-12 lg:items-start">
           {/* Gallery */}
           <div className="min-w-0 -mx-3 sm:mx-0 px-0 sm:px-0">
-            <div className="sm:rounded-none px-3 sm:px-0">
+            <div ref={galleryRef} className="sm:rounded-none px-3 sm:px-0">
               <ProductImageGallery
                 product={product}
                 selectedVariant={selectedVariant}

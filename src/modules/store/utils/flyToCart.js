@@ -55,16 +55,23 @@ function bump() {
  * Floats a copy of the product photo from `sourceEl` to the cart icon along a
  * curved path (transform/opacity only, so it stays on the compositor).
  * The cart icon bounces and updates its counter when the copy lands.
+ * If the photo is scrolled off screen, the copy takes off from `fallbackEl` (e.g. the clicked button).
  */
-export function flyToCart(sourceEl) {
+export function flyToCart(sourceEl, { fallbackEl } = {}) {
   const target = typeof document !== 'undefined' ? findCartTarget() : null;
-  const from = sourceEl?.getBoundingClientRect?.();
+  let from = sourceEl?.getBoundingClientRect?.();
+  const offScreen = !from || from.width === 0 || from.bottom < 0 || from.top > window.innerHeight;
+  if (offScreen && fallbackEl) {
+    const r = fallbackEl.getBoundingClientRect();
+    const s = 72;
+    from = { left: r.left + r.width / 2 - s / 2, top: r.top + r.height / 2 - s / 2, width: s, height: s };
+  }
   if (!target || !from || from.width === 0 || prefersReducedMotion() || !Element.prototype.animate) {
     bump();
     return;
   }
 
-  const img = sourceEl.querySelector('img');
+  const img = sourceEl?.querySelector('img');
   const src = img?.currentSrc || img?.src || null;
   const size = Math.round(Math.min(from.width, from.height, 150));
   const to = target.getBoundingClientRect();
