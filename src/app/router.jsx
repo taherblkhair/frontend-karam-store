@@ -7,6 +7,8 @@ import { ScrollToTop } from '@shared/components/ScrollToTop';
 import HomePage from '@modules/store/pages/HomePage';
 import StoreProductsPage from '@modules/store/pages/ProductsPage';
 import ProductDetailPage from '@modules/store/pages/ProductDetailPage';
+import BrandsPage from '@modules/store/pages/BrandsPage';
+import BrandPage from '@modules/store/pages/BrandPage';
 import CartPage from '@modules/store/pages/CartPage';
 import CheckoutPage from '@modules/store/pages/CheckoutPage';
 import NotFoundPage from '@modules/store/pages/NotFoundPage';
@@ -48,6 +50,8 @@ export function AppRouter() {
           <Route path="/products" element={<StoreProductsPage />} />
           <Route path="/product/:slug" element={<ProductDetailPage />} />
           <Route path="/products/:slug" element={<LegacyProductRedirect />} />
+          <Route path="/brands" element={<BrandsPage />} />
+          <Route path="/brand/:slug" element={<BrandPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route element={<GuestRoute />}>

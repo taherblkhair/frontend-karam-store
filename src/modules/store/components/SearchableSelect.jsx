@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Search, Check } from 'lucide-react';
 
 /** Loose Arabic matching: ignore diacritics/tatweel and unify common letter variants. */
-function normalizeArabic(text) {
+export function normalizeArabic(text) {
   return String(text || '')
     .toLowerCase()
     .replace(/[\u064B-\u0652\u0640]/g, '')

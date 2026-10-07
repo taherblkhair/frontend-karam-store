@@ -9,6 +9,7 @@ export const storeApi = {
   categories: () => api.get(endpoints.store.categories),
   colors: () => api.get(endpoints.store.colors),
   sizes: () => api.get(endpoints.store.sizes),
+  brands: () => api.get(endpoints.store.brands),
   cities: () => api.get(endpoints.store.cities),
   areas: (cityId) => api.get(`${endpoints.store.cities}/${cityId}/areas`),
   settings: () => api.get(endpoints.store.settings),

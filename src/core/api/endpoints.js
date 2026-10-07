@@ -38,6 +38,7 @@ export const endpoints = {
     categories: '/store/categories',
     colors: '/store/colors',
     sizes: '/store/sizes',
+    brands: '/store/brands',
     cities: '/store/cities',
     settings: '/store/settings',
     shippingCost: '/store/shipping-cost',

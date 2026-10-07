@@ -6,6 +6,44 @@ import { LoadingSpinner } from '@shared/ui';
 import { CategoryCard } from '@modules/store/components/CategoryCard';
 import { BannerCarousel } from '@modules/store/components/BannerCarousel';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
+import { BrandTile, useStoreBrands } from '@modules/store/components/BrandTile';
+import { Search } from 'lucide-react';
+
+const HOME_BRANDS_LIMIT = 11;
+
+function BrandsSection() {
+  const { data: brands = [] } = useStoreBrands();
+  if (!brands.length) return null;
+  const visible = brands.slice(0, HOME_BRANDS_LIMIT);
+
+  return (
+    <section className="container mx-auto px-4 pb-4 sm:pb-6">
+      <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
+        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
+          البراندات
+        </h2>
+        <Link
+          to="/brands"
+          className="shrink-0 text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
+        >
+          عرض الكل ({brands.length})
+        </Link>
+      </div>
+      <div className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 snap-x scrollbar-none md:mx-0 md:grid md:grid-cols-6 md:overflow-visible md:px-0">
+        <Link
+          to="/brands"
+          className="card flex min-h-[5.5rem] w-28 shrink-0 snap-start flex-col items-center justify-center gap-1.5 border-dashed border-primary-600/30 bg-primary-50/60 px-3 text-center text-primary-700 transition hover:border-primary-600/60 md:w-auto dark:bg-primary-900/20 dark:text-primary-200"
+        >
+          <Search size={20} aria-hidden />
+          <span className="text-sm font-semibold">ابحث عن براند</span>
+        </Link>
+        {visible.map((brand) => (
+          <BrandTile key={brand.id} brand={brand} className="w-32 shrink-0 snap-start md:w-auto" />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function CategoriesSection({ categories }) {
   if (!categories?.length) return null;
@@ -66,6 +104,8 @@ export default function HomePage() {
           ) : null}
 
           <CategoriesSection categories={home?.categories} />
+
+          <BrandsSection />
 
           <StoreProductSection
             title="عروض مميزة"
