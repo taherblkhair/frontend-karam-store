@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Check, Copy } from 'lucide-react';
-import { notifySuccess, notifyError } from '@shared/services/toast.service';
+import { Check, CheckCircle2, Copy, X } from 'lucide-react';
+import { notifySuccess, notifyError, dismissNotification } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
@@ -18,6 +18,68 @@ import {
 import { clearBuyNowItems, getBuyNowItems } from '@modules/store/utils/buyNow';
 import { toOrderItemPayload } from '@modules/store/utils/lineItem.js';
 import { OptimizedThumb } from '@shared/components/OptimizedImage';
+import { SearchableSelect } from '@modules/store/components/SearchableSelect';
+
+const PHONE_LENGTH = 10;
+const VALIDATION_TOAST_ID = 'checkout-validation';
+
+/** Digits only, max 10 — but let +218 / 00218 pasted numbers through so they normalize to 09xxxxxxxx. */
+function sanitizePhoneInput(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (digits.startsWith('00218') || digits.startsWith('218')) {
+    const normalized = normalizeLibyaPhone(digits);
+    return normalized.startsWith('0') ? normalized.slice(0, PHONE_LENGTH) : digits.slice(0, 14);
+  }
+  return digits.slice(0, PHONE_LENGTH);
+}
+
+function phoneError(value) {
+  const phone = normalizeLibyaPhone(value);
+  if (!phone) return 'يرجى إدخال رقم الهاتف';
+  if (!phone.startsWith('09')) return 'رقم الهاتف يجب أن يبدأ بـ 09، مثال: 0915153324';
+  if (phone.length !== PHONE_LENGTH) {
+    return `رقم الهاتف يجب أن يتكون من ${PHONE_LENGTH} أرقام (أدخلت ${phone.length})، مثال: 0915153324`;
+  }
+  if (!isValidLibyaMobile(phone)) return LIBYA_PHONE_MESSAGE;
+  return '';
+}
+
+/** Ordered as on screen so the first message always points at the first field to fix. */
+const DELIVERY_RULES = [
+  ['customer_name', (f) => (f.customer_name.trim() ? '' : 'يرجى إدخال الاسم')],
+  ['customer_phone', (f) => phoneError(f.customer_phone)],
+  ['city_id', (f) => (f.city_id ? '' : 'يرجى اختيار المدينة')],
+  [
+    'area_id',
+    (f, ctx) => {
+      if (ctx.areasLoading) return 'جاري تحميل المناطق، يرجى الانتظار ثم اختيار المنطقة';
+      return ctx.areasRequired && !f.area_id ? 'يرجى اختيار المنطقة' : '';
+    },
+  ],
+  [
+    'password',
+    (f, ctx) =>
+      ctx.passwordRequired && f.password.length < 8
+        ? 'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل'
+        : '',
+  ],
+];
+
+function firstDeliveryError(form, ctx) {
+  for (const [field, rule] of DELIVERY_RULES) {
+    const message = rule(form, ctx);
+    if (message) return { field, message };
+  }
+  return null;
+}
+
+function RequiredMark() {
+  return (
+    <span className="text-red-500" aria-hidden>
+      {' '}*
+    </span>
+  );
+}
 
 async function copyToClipboard(text) {
   if (navigator.clipboard?.writeText) {
@@ -107,13 +169,21 @@ export default function CheckoutPage() {
   });
   const [shippingCost, setShippingCost] = useState(0);
   const [addressPrefillDone, setAddressPrefillDone] = useState(false);
+  const [clientError, setClientError] = useState(null);
+  const fieldRefs = {
+    customer_name: useRef(null),
+    customer_phone: useRef(null),
+    city_id: useRef(null),
+    area_id: useRef(null),
+    password: useRef(null),
+  };
 
   const { data: citiesData } = useQuery({
     queryKey: ['cities'],
     queryFn: () => storeApi.cities(),
   });
 
-  const { data: areasData } = useQuery({
+  const { data: areasData, isLoading: areasLoading } = useQuery({
     queryKey: ['areas', form.city_id],
     queryFn: () => storeApi.areas(form.city_id),
     enabled: !!form.city_id,
@@ -189,6 +259,28 @@ export default function CheckoutPage() {
     },
   });
 
+  const areas = areasData?.data || [];
+  const validationCtx = {
+    areasRequired: areas.length > 0,
+    areasLoading: Boolean(form.city_id) && areasLoading,
+    passwordRequired: createAccount && !user,
+  };
+
+  // Re-check only the field that was flagged, so its error disappears once it's fixed.
+  const updateField = (field, value, extra = {}) => {
+    const next = { ...form, [field]: value, ...extra };
+    setForm(next);
+    if (clientError?.field === field) {
+      const rule = DELIVERY_RULES.find(([f]) => f === field)?.[1];
+      const message = rule ? rule(next, validationCtx) : '';
+      setClientError(message ? { field, message } : null);
+      if (!message) dismissNotification(VALIDATION_TOAST_ID);
+    }
+  };
+
+  const fieldErrorFor = (field) =>
+    (clientError?.field === field ? clientError.message : '') || getFieldError(field);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearErrors();
@@ -198,10 +290,20 @@ export default function CheckoutPage() {
       });
     }
 
-    const customerPhone = normalizeLibyaPhone(form.customer_phone);
-    if (!isValidLibyaMobile(customerPhone)) {
-      return notifyError({ message: LIBYA_PHONE_MESSAGE });
+    const invalid = firstDeliveryError(form, validationCtx);
+    if (invalid) {
+      setClientError(invalid);
+      notifyError({ message: invalid.message }, { id: VALIDATION_TOAST_ID });
+      const el = fieldRefs[invalid.field]?.current;
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.focus({ preventScroll: true });
+      }
+      return;
     }
+    setClientError(null);
+
+    const customerPhone = normalizeLibyaPhone(form.customer_phone);
 
     if (createAccount && !user) {
       try {
@@ -215,11 +317,6 @@ export default function CheckoutPage() {
         applyApiError(err);
         return notifyError(err);
       }
-    }
-
-    const areas = areasData?.data || [];
-    if (areas.length > 0 && !form.area_id) {
-      return notifyError({ message: 'اختر المنطقة' });
     }
 
     orderMutation.mutate({
@@ -250,6 +347,15 @@ export default function CheckoutPage() {
     );
   }
 
+  const inputErrorClass = '!border-red-400 ring-2 ring-red-200 dark:ring-red-900/40';
+  const phoneComplete = !phoneError(form.customer_phone);
+  const cityOptions = (citiesData?.data || []).map((c) => ({
+    value: c.id,
+    label: c.name_ar,
+    hint: c.shipping_price != null ? `شحن ${c.shipping_price} د.ل` : undefined,
+  }));
+  const areaOptions = areas.map((a) => ({ value: a.id, label: a.name_ar }));
+
   const total = subtotal + shippingCost;
   const hasSavedAddress = Boolean(user?.shipping_address?.address || user?.shipping_address?.city_id);
 
@@ -265,7 +371,7 @@ export default function CheckoutPage() {
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
+        <form onSubmit={handleSubmit} noValidate className="grid md:grid-cols-2 gap-8">
           {formError ? (
             <div className="md:col-span-2">
               <FormAlert message={formError} />
@@ -283,66 +389,129 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-4">
                 <div>
+                  <label htmlFor="checkout-name" className="block text-sm font-medium mb-1.5">
+                    الاسم الكامل
+                    <RequiredMark />
+                  </label>
                   <input
-                    className="input"
-                    placeholder="الاسم الكامل"
-                    required
+                    id="checkout-name"
+                    ref={fieldRefs.customer_name}
+                    className={`input ${fieldErrorFor('customer_name') ? inputErrorClass : ''}`}
+                    placeholder="مثال: محمد أحمد"
+                    autoComplete="name"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrorFor('customer_name')) || undefined}
                     value={form.customer_name}
-                    onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                    onChange={(e) => updateField('customer_name', e.target.value)}
                   />
-                  <FieldError message={getFieldError('customer_name')} />
+                  <FieldError message={fieldErrorFor('customer_name')} />
                 </div>
                 <div>
-                  <input
-                    className="input"
-                    placeholder="مثال: 0912345678"
-                    pattern="09[1-5][0-9]{7}"
-                    title={LIBYA_PHONE_MESSAGE}
-                    required
-                    value={form.customer_phone}
-                    onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">091 · 092 · 093 · 094 · 095</p>
-                  <FieldError message={getFieldError('customer_phone')} />
+                  <label htmlFor="checkout-phone" className="block text-sm font-medium mb-1.5">
+                    رقم الهاتف
+                    <RequiredMark />
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="checkout-phone"
+                      ref={fieldRefs.customer_phone}
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      dir="ltr"
+                      className={`input pl-20 text-right tabular-nums tracking-wide ${
+                        fieldErrorFor('customer_phone') ? inputErrorClass : phoneComplete ? '!border-primary-500' : ''
+                      }`}
+                      placeholder="مثال: 0915153324"
+                      aria-required="true"
+                      aria-invalid={Boolean(fieldErrorFor('customer_phone')) || undefined}
+                      value={form.customer_phone}
+                      onChange={(e) => updateField('customer_phone', sanitizePhoneInput(e.target.value))}
+                    />
+                    <div className="absolute inset-y-0 left-2 flex items-center gap-1">
+                      {phoneComplete && (
+                        <CheckCircle2 size={20} className="text-primary-600" aria-label="رقم صحيح" />
+                      )}
+                      {form.customer_phone && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateField('customer_phone', '');
+                            fieldRefs.customer_phone.current?.focus();
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-ink-400 hover:bg-tertiary-200 hover:text-ink-700 dark:hover:bg-gray-700"
+                          aria-label="مسح رقم الهاتف"
+                          title="مسح الرقم"
+                        >
+                          <X size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {!fieldErrorFor('customer_phone') && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {phoneComplete ? 'تم إدخال الرقم بشكل صحيح' : '10 أرقام تبدأ بـ 091 · 092 · 093 · 094 · 095'}
+                    </p>
+                  )}
+                  <FieldError message={fieldErrorFor('customer_phone')} />
                 </div>
-                <select
-                  className="input"
-                  required
-                  value={form.city_id}
-                  onChange={(e) => setForm({ ...form, city_id: e.target.value, area_id: '' })}
-                >
-                  <option value="">اختر المدينة</option>
-                  {citiesData?.data?.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name_ar}
-                      {c.shipping_price != null ? ` — شحن ${c.shipping_price} د.ل` : ''}
-                    </option>
-                  ))}
-                </select>
-                {(areasData?.data?.length > 0 || !form.city_id) && (
-                  <select
-                    className="input"
-                    required={!!areasData?.data?.length}
-                    value={form.area_id}
-                    onChange={(e) => setForm({ ...form, area_id: e.target.value })}
-                    disabled={!form.city_id}
-                  >
-                    <option value="">اختر المنطقة</option>
-                    {areasData?.data?.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name_ar}
-                      </option>
-                    ))}
-                  </select>
+                <div>
+                  <span className="block text-sm font-medium mb-1.5">
+                    المدينة
+                    <RequiredMark />
+                  </span>
+                  <SearchableSelect
+                    ref={fieldRefs.city_id}
+                    options={cityOptions}
+                    value={form.city_id}
+                    onChange={(cityId) => updateField('city_id', cityId, { area_id: '' })}
+                    placeholder="اختر المدينة"
+                    searchPlaceholder="ابحث عن مدينتك"
+                    emptyText="لا توجد مدينة مطابقة للبحث"
+                    invalid={Boolean(fieldErrorFor('city_id'))}
+                  />
+                  <FieldError message={fieldErrorFor('city_id')} />
+                </div>
+                {(areas.length > 0 || !form.city_id || validationCtx.areasLoading) && (
+                  <div>
+                    <span className="block text-sm font-medium mb-1.5">
+                      المنطقة
+                      <RequiredMark />
+                    </span>
+                    <SearchableSelect
+                      ref={fieldRefs.area_id}
+                      options={areaOptions}
+                      value={form.area_id}
+                      onChange={(areaId) => updateField('area_id', areaId)}
+                      placeholder={
+                        !form.city_id
+                          ? 'اختر المدينة أولاً'
+                          : validationCtx.areasLoading
+                            ? 'جاري تحميل المناطق...'
+                            : 'اختر المنطقة'
+                      }
+                      searchPlaceholder="ابحث عن منطقتك"
+                      emptyText="لا توجد منطقة مطابقة للبحث"
+                      disabled={!form.city_id || validationCtx.areasLoading}
+                      invalid={Boolean(fieldErrorFor('area_id'))}
+                    />
+                    <FieldError message={fieldErrorFor('area_id')} />
+                  </div>
                 )}
-                <textarea
-                  className="input"
-                  placeholder="العنوان التفصيلي"
-                  required
-                  rows={3}
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                />
+                <div>
+                  <label htmlFor="checkout-address" className="block text-sm font-medium mb-1.5">
+                    العنوان التفصيلي <span className="font-normal text-ink-400">(اختياري)</span>
+                  </label>
+                  <textarea
+                    id="checkout-address"
+                    className="input"
+                    placeholder="مثال: بجانب مسجد ...، الشارع، رقم المبنى"
+                    rows={3}
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  />
+                  <FieldError message={getFieldError('address')} />
+                </div>
                 <textarea
                   className="input"
                   placeholder="ملاحظات (اختياري)"
@@ -366,15 +535,16 @@ export default function CheckoutPage() {
                 {createAccount && (
                   <div>
                     <input
+                      ref={fieldRefs.password}
                       type="password"
-                      className="input"
+                      className={`input ${fieldErrorFor('password') ? inputErrorClass : ''}`}
                       placeholder="كلمة المرور (8 أحرف على الأقل)"
-                      required={createAccount}
-                      minLength={8}
+                      aria-required="true"
+                      autoComplete="new-password"
                       value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      onChange={(e) => updateField('password', e.target.value)}
                     />
-                    <FieldError message={getFieldError('password')} />
+                    <FieldError message={fieldErrorFor('password')} />
                   </div>
                 )}
                 <p className="text-sm text-gray-500 mt-2">أو أكمل الطلب كضيف بدون تسجيل</p>
