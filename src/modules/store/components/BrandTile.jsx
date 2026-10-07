@@ -84,7 +84,7 @@ function BrandWordmark({ name }) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 bg-gradient-to-br from-tertiary-50 via-white to-primary-50/60 px-3 dark:from-gray-100 dark:via-white dark:to-primary-50">
       <span
-        className={`line-clamp-2 text-center font-display font-bold uppercase leading-snug text-primary-700 [overflow-wrap:anywhere] ${
+        className={`line-clamp-2 text-center font-display font-bold uppercase leading-snug text-primary-700 dark:text-primary-700 [overflow-wrap:anywhere] ${
           long ? 'text-sm sm:text-base tracking-[0.06em]' : 'text-base sm:text-lg tracking-[0.18em]'
         }`}
       >
