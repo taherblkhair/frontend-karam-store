@@ -63,7 +63,35 @@ export function buildDetailGallery(product) {
     });
   }
 
-  return items;
+  // A photo belongs to every variant using the same URL (product photos included);
+  // it is unavailable only when none of those variants has stock.
+  const variants = product?.variants || [];
+  return items.map((item) => {
+    const linked = variants.filter((v) => v.image && v.image === item.image);
+    if (!linked.length) return item;
+    const available = linked.find((v) => Number(v.stock) > 0);
+    const v = available || linked[0];
+    return {
+      ...item,
+      variant_id: v.id,
+      color_id: v.color_id || null,
+      color_name: item.color_name || v.color_name || null,
+      hex_code: item.hex_code || v.hex_code || null,
+      unavailable: !available,
+    };
+  });
+}
+
+const firstAvailableIndex = (gallery) => Math.max(0, gallery.findIndex((g) => !g.unavailable));
+
+export function UnavailableBadge({ className = '' }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full bg-ink-800/85 px-3 py-1 text-xs sm:text-sm font-bold text-white shadow-sm backdrop-blur-sm ${className}`}
+    >
+      غير متوفر
+    </span>
+  );
 }
 
 /**
@@ -74,10 +102,12 @@ export function ProductImageGallery({
   product,
   selectedVariant = null,
   onVariantImageSelect,
+  badge = null,
+  markUnavailable = true,
   className = '',
 }) {
   const gallery = useMemo(() => buildDetailGallery(product), [product]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => (markUnavailable ? firstAvailableIndex(gallery) : 0));
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchRef = useRef({ x: 0, active: false });
   const viewportRef = useRef(null);
@@ -85,6 +115,8 @@ export function ProductImageGallery({
   const count = gallery.length;
   const safeIndex = count ? Math.min(index, count - 1) : 0;
   const current = count ? gallery[safeIndex] : null;
+  const currentUnavailable = markUnavailable && Boolean(current?.unavailable);
+  const topBadge = badge || (currentUnavailable ? <UnavailableBadge /> : null);
 
   const goTo = useCallback(
     (i) => {
@@ -113,9 +145,9 @@ export function ProductImageGallery({
   }, [selectedVariant?.id, selectedVariant?.image, gallery, count]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    setIndex(0);
+    setIndex(markUnavailable ? firstAvailableIndex(gallery) : 0);
     setLightboxOpen(false);
-  }, [product?.id]);
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (lightboxOpen) return undefined;
@@ -160,8 +192,13 @@ export function ProductImageGallery({
   if (!count) {
     return (
       <div
-        className={`aspect-[4/5] sm:aspect-square max-h-[min(70dvh,520px)] sm:max-h-none rounded-2xl bg-tertiary-100 dark:bg-gray-800 flex items-center justify-center text-ink-300 ${className}`}
+        className={`relative aspect-[4/5] sm:aspect-square max-h-[min(52dvh,520px)] sm:max-h-none rounded-2xl bg-tertiary-100 dark:bg-gray-800 flex items-center justify-center text-ink-300 ${className}`}
       >
+        {badge && (
+          <div className="absolute top-3 inset-x-0 z-10 flex justify-center pointer-events-none">
+            {badge}
+          </div>
+        )}
         لا توجد صورة
       </div>
     );
@@ -171,7 +208,7 @@ export function ProductImageGallery({
     <div className={`w-full min-w-0 ${className}`} dir="ltr">
       <div
         ref={viewportRef}
-        className="relative w-full aspect-[4/5] sm:aspect-square max-h-[min(68dvh,560px)] sm:max-h-[min(80vh,640px)] mx-auto rounded-xl sm:rounded-2xl overflow-hidden bg-tertiary-100 dark:bg-gray-800 group select-none touch-pan-y"
+        className="relative w-full aspect-[4/5] sm:aspect-square max-h-[min(52dvh,560px)] sm:max-h-[min(80vh,640px)] mx-auto rounded-xl sm:rounded-2xl overflow-hidden bg-tertiary-100 dark:bg-gray-800 group select-none touch-pan-y"
         aria-roledescription="carousel"
         aria-label="صور المنتج"
       >
@@ -186,12 +223,17 @@ export function ProductImageGallery({
             src={current.image}
             alt={current.label || product?.name_ar || 'صورة المنتج'}
             className="w-full h-full pointer-events-none"
-            imgClassName="transition-transform duration-500 group-hover:scale-[1.03]"
+            imgClassName={`transition duration-500 group-hover:scale-[1.03] ${
+              currentUnavailable ? 'grayscale-[60%]' : ''
+            }`}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
             widths={[400, 800, 1200]}
             preferSrcWidth={800}
             priority={safeIndex === 0}
           />
+          {currentUnavailable && (
+            <span className="absolute inset-0 bg-white/40 dark:bg-ink-900/45" aria-hidden />
+          )}
         </button>
 
         {/* Zoom — top area on mobile to avoid dots clash */}
@@ -251,6 +293,12 @@ export function ProductImageGallery({
           </>
         )}
 
+        {topBadge && (
+          <div className="absolute top-2.5 inset-x-0 z-10 flex justify-center pointer-events-none" dir="rtl">
+            {topBadge}
+          </div>
+        )}
+
         {current.color_name && (
           <span className="absolute bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 z-10 text-[11px] sm:text-xs font-medium px-2.5 py-1 rounded-full bg-white/95 text-ink-800 shadow-sm max-w-[80%] truncate">
             {current.color_name}
@@ -285,8 +333,19 @@ export function ProductImageGallery({
                     : 'border-ink-100 hover:border-primary-300 dark:border-gray-600'
                 }`}
               >
-                <OptimizedThumb src={slide.image} alt="" className="w-full h-full" />
-                {slide.hex_code && (
+                <OptimizedThumb
+                  src={slide.image}
+                  alt=""
+                  className={`w-full h-full ${
+                    markUnavailable && slide.unavailable ? 'opacity-50 grayscale' : ''
+                  }`}
+                />
+                {markUnavailable && slide.unavailable && (
+                  <span className="absolute inset-x-0 bottom-0 bg-ink-900/75 py-0.5 text-center text-[9px] sm:text-[10px] font-bold leading-tight text-white">
+                    غير متوفر
+                  </span>
+                )}
+                {slide.hex_code && !(markUnavailable && slide.unavailable) && (
                   <span
                     className="absolute bottom-1 start-1 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border border-white shadow"
                     style={{ backgroundColor: slide.hex_code }}
@@ -306,6 +365,7 @@ export function ProductImageGallery({
         onClose={() => setLightboxOpen(false)}
         onIndexChange={(i) => goTo(i)}
         productName={product?.name_ar || ''}
+        markUnavailable={markUnavailable}
       />
     </div>
   );
