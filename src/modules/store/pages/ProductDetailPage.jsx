@@ -10,7 +10,6 @@ import { ProductImageGallery } from '@modules/store/components/ProductImageGalle
 import { ProductDetailAccordions } from '@modules/store/components/ProductDetailAccordions';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { useCart } from '@modules/store/context/CartContext';
-import { formatPrice } from '@core/constants';
 import { startBuyNow } from '@modules/store/utils/buyNow';
 import {
   decodeProductSlug,
@@ -69,18 +68,40 @@ async function fetchPicksForYou(product) {
   return picks.slice(0, PICKS_LIMIT);
 }
 
-function OptionChip({ active, onClick, children, className = '' }) {
+const isInStock = (variant) => Number(variant?.stock) > 0;
+
+/** "290" instead of "290.00" — keeps the headline price short and scannable. */
+const formatAmount = (value) => {
+  const n = parseFloat(value || 0);
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+};
+
+function OptionChip({
+  active,
+  disabled = false,
+  soldOutLabel = true,
+  onClick,
+  children,
+  className = '',
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 px-3.5 sm:px-4 py-2.5 rounded-xl border text-sm font-medium transition active:scale-[0.98] inline-flex items-center gap-2 ${
-        active
-          ? 'border-primary-600 bg-primary-50 text-primary-800 ring-2 ring-primary-600/20 dark:bg-primary-900/30 dark:text-primary-100'
-          : 'border-ink-200 bg-white text-ink-700 hover:border-primary-600/40 dark:border-gray-600 dark:bg-ink-800 dark:text-gray-100'
+      disabled={disabled}
+      title={disabled ? 'نفد' : undefined}
+      className={`min-h-11 px-3.5 sm:px-4 py-2.5 rounded-xl border text-sm font-medium transition inline-flex items-center gap-2 ${
+        disabled
+          ? `border-dashed bg-tertiary-100 text-ink-300 cursor-not-allowed dark:border-gray-700 dark:bg-ink-900 dark:text-gray-500 ${
+              active ? 'border-ink-400 ring-2 ring-ink-300/40' : 'border-ink-200'
+            }`
+          : active
+            ? 'active:scale-[0.98] border-primary-600 bg-primary-50 text-primary-800 ring-2 ring-primary-600/20 dark:bg-primary-900/30 dark:text-primary-100'
+            : 'active:scale-[0.98] border-ink-200 bg-white text-ink-700 hover:border-primary-600/40 dark:border-gray-600 dark:bg-ink-800 dark:text-gray-100'
       } ${className}`}
     >
       {children}
+      {disabled && soldOutLabel && <span className="text-[11px] font-bold text-ink-400">نفد</span>}
     </button>
   );
 }
@@ -125,9 +146,15 @@ export default function ProductDetailPage() {
   const handleVariantImageSelect = useCallback(
     (slide) => {
       if (!product || !slide?.variant_id) return;
+      // Viewing a sold-out photo selects its variant so the buy buttons lock instead of
+      // silently keeping a different (in-stock) selection behind the image.
       const variant =
-        product.variants?.find((v) => v.id === slide.variant_id) ||
-        product.variants?.find((v) => v.color_id && v.color_id === slide.color_id);
+        product.variants?.find(
+          (v) => v.id === slide.variant_id && (slide.unavailable || isInStock(v))
+        ) ||
+        product.variants?.find(
+          (v) => v.color_id && v.color_id === slide.color_id && isInStock(v)
+        );
       if (variant) setSelectedVariant(variant);
     },
     [product]
@@ -171,18 +198,41 @@ export default function ProductDetailPage() {
 
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
-  const currentPrice = selectedVariant?.price || product.price;
+  const productSoldOut = hasVariants
+    ? !variants.some(isInStock)
+    : Number(product.total_stock) <= 0;
   const currentStock = selectedVariant?.stock ?? product.total_stock;
   const maxQty = Math.max(1, Number(currentStock) || 1);
-  const outOfStock = Number(currentStock) <= 0;
+  const outOfStock = selectedVariant ? !isInStock(selectedVariant) : productSoldOut;
+  const variantSoldOut = outOfStock && !productSoldOut;
+  const variantSoldOutText = selectedVariant?.color_id
+    ? 'هذا اللون غير متوفر — اختر لونًا متوفرًا'
+    : 'هذا الخيار غير متوفر — اختر خيارًا متوفرًا';
+
+  const effectivePrice = (v) => parseFloat(v.price || product.price) || 0;
+  const pricedVariants = variants.some(isInStock) ? variants.filter(isInStock) : variants;
+  const variantPrices = pricedVariants.map(effectivePrice);
+  const minVariantPrice = variantPrices.length ? Math.min(...variantPrices) : null;
+  const priceFrom =
+    !selectedVariant &&
+    variantPrices.length > 0 &&
+    Math.max(...variantPrices) !== minVariantPrice;
+  const currentPrice = selectedVariant
+    ? effectivePrice(selectedVariant)
+    : (minVariantPrice ?? product.price);
+  const comparePrice = selectedVariant?.compare_price || product.compare_price;
+  const saving =
+    !priceFrom && comparePrice ? parseFloat(comparePrice) - parseFloat(currentPrice) : 0;
+  const hasDiscount = saving > 0;
 
   const ensureVariant = () => {
     if (hasVariants && !selectedVariant) {
-      notifyError({ message: 'يرجى اختيار اللون والمقاس' });
+      const parts = [uniqueColors.length && 'اللون', uniqueSizes.length && 'المقاس'].filter(Boolean);
+      notifyError({ message: `يرجى اختيار ${parts.join(' و') || 'الخيار'}` });
       return false;
     }
     if (outOfStock) {
-      notifyError({ message: 'المنتج غير متوفر' });
+      notifyError({ message: variantSoldOut ? variantSoldOutText : 'المنتج غير متوفر' });
       return false;
     }
     return true;
@@ -208,14 +258,17 @@ export default function ProductDetailPage() {
     navigate('/checkout?mode=buy-now');
   };
 
+  // Keep the other dimension when that combination is in stock; otherwise
+  // fall back to any in-stock variant so the selection never lands on a sold-out one.
   const selectColor = (colorId) => {
     const variant =
       variants.find(
         (v) =>
           v.color_id === colorId &&
+          isInStock(v) &&
           (!selectedVariant?.size_id || v.size_id === selectedVariant.size_id)
-      ) || variants.find((v) => v.color_id === colorId);
-    setSelectedVariant(variant || null);
+      ) || variants.find((v) => v.color_id === colorId && isInStock(v));
+    if (variant) setSelectedVariant(variant);
   };
 
   const selectSize = (sizeId) => {
@@ -223,9 +276,10 @@ export default function ProductDetailPage() {
       variants.find(
         (v) =>
           v.size_id === sizeId &&
+          isInStock(v) &&
           (!selectedVariant?.color_id || v.color_id === selectedVariant.color_id)
-      ) || variants.find((v) => v.size_id === sizeId);
-    setSelectedVariant(variant || null);
+      ) || variants.find((v) => v.size_id === sizeId && isInStock(v));
+    if (variant) setSelectedVariant(variant);
   };
 
   const uniqueColors = [
@@ -237,14 +291,36 @@ export default function ProductDetailPage() {
           { id: v.color_id, name: v.color_name, hex: v.hex_code },
         ])
     ).values(),
-  ];
+  ].map((c) => ({
+    ...c,
+    available: variants.some((v) => v.color_id === c.id && isInStock(v)),
+  }));
   const uniqueSizes = [
     ...new Map(
       variants
         .filter((v) => v.size_id)
         .map((v) => [v.size_id, { id: v.size_id, name: v.size_name }])
     ).values(),
-  ];
+  ].map((s) => ({
+    ...s,
+    available: variants.some((v) => v.size_id === s.id && isInStock(v)),
+  }));
+
+  const someColorsOut = uniqueColors.some((c) => !c.available);
+  const someSizesOut = uniqueSizes.some((s) => !s.available);
+  let partialStockHint = null;
+  if (!productSoldOut) {
+    if (someColorsOut && someSizesOut) partialStockHint = 'بعض الخيارات نفدت — اختر من المتوفر';
+    else if (someColorsOut) partialStockHint = 'بعض الألوان نفدت — اختر لونًا متوفرًا';
+    else if (someSizesOut) partialStockHint = 'بعض المقاسات نفدت — اختر مقاسًا متوفرًا';
+  }
+
+  const soldOutBadge = productSoldOut ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-700/90 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-secondary-300 shadow-sm ring-1 ring-secondary-400/40 backdrop-blur-sm">
+      <span className="h-1.5 w-1.5 rounded-full bg-secondary-400" aria-hidden />
+      نفدت الكمية
+    </span>
+  ) : null;
 
   const qtyControl = (
     <div className="inline-flex items-center rounded-xl border border-ink-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-ink-800">
@@ -305,12 +381,18 @@ export default function ProductDetailPage() {
                 product={product}
                 selectedVariant={selectedVariant}
                 onVariantImageSelect={handleVariantImageSelect}
+                badge={soldOutBadge}
+                markUnavailable={!productSoldOut}
               />
             </div>
           </div>
 
           {/* Buy box */}
           <div className="min-w-0 flex flex-col">
+            {product.category_name && (
+              <p className="text-xs sm:text-sm text-ink-500 mb-1">{product.category_name}</p>
+            )}
+
             <div className="flex items-start gap-2 sm:gap-3 mb-2">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex-1 leading-snug break-words">
                 {product.name_ar}
@@ -333,30 +415,41 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {product.category_name && (
-              <p className="text-sm text-ink-500 mb-3 sm:mb-4">{product.category_name}</p>
-            )}
-
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl font-bold text-primary-600 tabular-nums">
-                {formatPrice(currentPrice)}
-              </span>
-              {product.compare_price &&
-                parseFloat(product.compare_price) > parseFloat(currentPrice) && (
-                  <span className="text-base sm:text-xl text-ink-300 line-through tabular-nums">
-                    {formatPrice(product.compare_price)}
+            <div className="mb-4 sm:mb-6 pb-4 sm:pb-5 border-b border-ink-100 dark:border-gray-700">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+                <p className="inline-flex items-baseline gap-1.5 text-primary-600 dark:text-primary-300">
+                  {priceFrom && (
+                    <span className="text-sm sm:text-base font-semibold text-ink-500">يبدأ من</span>
+                  )}
+                  <span className="text-4xl sm:text-5xl font-extrabold tabular-nums leading-none">
+                    {formatAmount(currentPrice)}
                   </span>
-                )}
-            </div>
-
-            {product.description && (
-              <div className="mb-5 sm:mb-6">
-                <h3 className="font-bold mb-1.5 text-sm sm:text-base">الوصف</h3>
-                <p className="text-sm sm:text-base text-ink-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">
-                  {product.description}
+                  <span className="text-xl sm:text-2xl font-bold">د.ل</span>
                 </p>
+                {hasDiscount && (
+                  <>
+                    <span className="text-base sm:text-lg text-ink-400 line-through tabular-nums">
+                      {formatAmount(comparePrice)} د.ل
+                    </span>
+                    <span className="rounded-full bg-secondary-400 px-2.5 py-0.5 text-xs sm:text-sm font-bold text-ink-800 tabular-nums">
+                      خصم {formatAmount(saving)} د.ل
+                    </span>
+                  </>
+                )}
               </div>
-            )}
+
+              <p
+                className={`mt-3 inline-flex items-center gap-2 text-sm font-semibold ${
+                  outOfStock ? 'text-ink-500 dark:text-gray-400' : 'text-primary-600 dark:text-primary-300'
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${outOfStock ? 'bg-red-500' : 'bg-primary-500'}`}
+                  aria-hidden
+                />
+                {variantSoldOut ? variantSoldOutText : outOfStock ? 'غير متوفر حاليًا' : 'متوفر الآن'}
+              </p>
+            </div>
 
             {uniqueColors.length > 0 && (
               <div className="mb-4">
@@ -371,15 +464,29 @@ export default function ProductDetailPage() {
                     <OptionChip
                       key={c.id}
                       active={selectedVariant?.color_id === c.id}
+                      disabled={!c.available}
+                      soldOutLabel={!productSoldOut}
                       onClick={() => selectColor(c.id)}
                     >
                       {c.hex && (
-                        <span
-                          className="inline-block w-4 h-4 rounded-full border border-black/10 shrink-0"
-                          style={{ backgroundColor: c.hex }}
-                        />
+                        <span className="relative inline-block w-4 h-4 shrink-0">
+                          <span
+                            className={`block w-4 h-4 rounded-full border border-black/10 ${
+                              c.available ? '' : 'opacity-40'
+                            }`}
+                            style={{ backgroundColor: c.hex }}
+                          />
+                          {!c.available && (
+                            <span
+                              className="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded bg-ink-500"
+                              aria-hidden
+                            />
+                          )}
+                        </span>
                       )}
-                      <span className="truncate max-w-[8rem]">{c.name}</span>
+                      <span className={`truncate max-w-[8rem] ${c.available ? '' : 'line-through'}`}>
+                        {c.name}
+                      </span>
                     </OptionChip>
                   ))}
                 </div>
@@ -399,29 +506,31 @@ export default function ProductDetailPage() {
                     <OptionChip
                       key={s.id}
                       active={selectedVariant?.size_id === s.id}
+                      disabled={!s.available}
+                      soldOutLabel={!productSoldOut}
                       onClick={() => selectSize(s.id)}
                       className="min-w-[2.75rem] justify-center"
                     >
-                      {s.name}
+                      <span className={s.available ? '' : 'line-through'}>{s.name}</span>
                     </OptionChip>
                   ))}
                 </div>
               </div>
             )}
 
-            <p className="text-sm mb-4">
-              الحالة:{' '}
-              {!outOfStock ? (
-                <span className="text-green-600 font-medium">متوفر</span>
-              ) : (
-                <span className="text-red-600 font-medium">غير متوفر</span>
-              )}
-            </p>
+            {partialStockHint && !variantSoldOut && (
+              <p className="mb-4 inline-flex items-center gap-2 self-start rounded-lg border border-secondary-300/70 bg-secondary-50 px-3 py-2 text-sm font-medium text-ink-700 dark:border-secondary-700/50 dark:bg-secondary-900/20 dark:text-secondary-100">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-secondary-500" aria-hidden />
+                {partialStockHint}
+              </p>
+            )}
 
-            <div className="flex items-center gap-3 mb-4 sm:mb-6">
-              <span className="text-sm text-ink-500 shrink-0">الكمية</span>
-              {qtyControl}
-            </div>
+            {!outOfStock && (
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <span className="text-sm text-ink-500 shrink-0">الكمية</span>
+                {qtyControl}
+              </div>
+            )}
 
             {/* Desktop / tablet actions (hidden on small phones — sticky bar) */}
             <div className="hidden sm:flex flex-col sm:flex-row gap-3">
@@ -430,6 +539,15 @@ export default function ProductDetailPage() {
             <p className="hidden sm:block mt-3 text-xs text-ink-400 leading-relaxed">
               «اطلب الآن» ينقلك مباشرة لإتمام الطلب لهذا المنتج فقط دون التأثير على محتويات السلة.
             </p>
+
+            {product.description && (
+              <div className="mt-5 sm:mt-6">
+                <h3 className="font-bold mb-1.5 text-sm sm:text-base">الوصف</h3>
+                <p className="text-sm sm:text-base text-ink-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">
+                  {product.description}
+                </p>
+              </div>
+            )}
 
             {/* Shipping & inspection — under cart CTAs */}
             <ProductDetailAccordions />
@@ -445,7 +563,17 @@ export default function ProductDetailPage() {
           paddingBottom: '0.5rem',
         }}
       >
-        <div className="container mx-auto px-3 pt-2.5 flex gap-2">
+        <div className="container mx-auto px-3 pt-2.5 flex items-center gap-2">
+          <div className="shrink-0 pe-1 leading-tight">
+            <p className="text-lg font-extrabold text-primary-600 dark:text-primary-300 tabular-nums whitespace-nowrap">
+              {formatAmount(currentPrice)} <span className="text-sm font-bold">د.ل</span>
+            </p>
+            {outOfStock && (
+              <p className="text-[11px] font-semibold text-ink-400">
+                {variantSoldOut ? 'غير متوفر' : 'نفدت الكمية'}
+              </p>
+            )}
+          </div>
           {buyButtons}
         </div>
       </div>

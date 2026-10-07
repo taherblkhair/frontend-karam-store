@@ -81,6 +81,13 @@ export function buildCardImageGallery(product) {
     ? product.variant_images
     : product?.variants || [];
 
+  // in_stock is absent on older payloads — treat unknown as available.
+  const availableByImage = new Map();
+  for (const v of list) {
+    if (!v?.image || v.in_stock === undefined) continue;
+    availableByImage.set(v.image, availableByImage.get(v.image) || Boolean(v.in_stock));
+  }
+
   for (const v of list) {
     push({
       key: `v-${v.id ?? items.length}`,
@@ -90,7 +97,10 @@ export function buildCardImageGallery(product) {
     });
   }
 
-  return items;
+  return items.map((item) => ({
+    ...item,
+    unavailable: availableByImage.get(item.image) === false,
+  }));
 }
 
 /**
@@ -108,20 +118,22 @@ export function StoreProductCard({
 }) {
   const { isSaved, toggle } = useWishlist();
   const gallery = useMemo(() => buildCardImageGallery(product), [product]);
-  const [activeKey, setActiveKey] = useState(gallery[0]?.key || null);
+  const outOfStock = product.total_stock != null && Number(product.total_stock) <= 0;
+  const defaultKey = (outOfStock ? null : gallery.find((g) => !g.unavailable)?.key) || gallery[0]?.key || null;
+  const [activeKey, setActiveKey] = useState(defaultKey);
 
   useEffect(() => {
-    setActiveKey(gallery[0]?.key || null);
+    setActiveKey(defaultKey);
   }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = gallery.find((g) => g.key === activeKey) || gallery[0] || null;
   const image = active?.image || null;
+  const activeUnavailable = !outOfStock && Boolean(active?.unavailable);
   const href = productPath(product);
   const saved = isSaved(product.id);
   const hasDiscount =
     product.compare_price &&
     parseFloat(product.compare_price) > parseFloat(product.price);
-  const outOfStock = product.total_stock != null && Number(product.total_stock) <= 0;
 
   const label =
     badge ||
@@ -147,7 +159,7 @@ export function StoreProductCard({
                   ? `${product.name_ar} — ${active.color_name}`
                   : product.name_ar
               }
-              className="h-full w-full"
+              className={`h-full w-full ${activeUnavailable ? 'opacity-60 grayscale-[60%]' : ''}`}
               imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
               widths={[400, 800]}
@@ -180,9 +192,9 @@ export function StoreProductCard({
         </button>
 
         <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
-          {outOfStock ? (
+          {outOfStock || activeUnavailable ? (
             <span className="rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
-              غير متوفر
+              {activeUnavailable && active?.color_name ? `${active.color_name} غير متوفر` : 'غير متوفر'}
             </span>
           ) : label ? (
             <span className="rounded-md bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink-800 shadow-sm ring-1 ring-black/5">
@@ -206,7 +218,11 @@ export function StoreProductCard({
                 type="button"
                 role="option"
                 aria-selected={selected}
-                title={item.color_name || 'صورة المنتج'}
+                title={
+                  item.unavailable && !outOfStock
+                    ? `${item.color_name || 'هذا الخيار'} — غير متوفر`
+                    : item.color_name || 'صورة المنتج'
+                }
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -227,9 +243,15 @@ export function StoreProductCard({
                 <OptimizedThumb
                   src={item.image}
                   alt={item.color_name || ''}
-                  className="h-full w-full"
+                  className={`h-full w-full ${item.unavailable && !outOfStock ? 'opacity-40 grayscale' : ''}`}
                   imgClassName="object-cover"
                 />
+                {item.unavailable && !outOfStock && (
+                  <span
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-[1.5px] w-[130%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-ink-600/70"
+                    aria-hidden
+                  />
+                )}
                 {item.hex_code && (
                   <span
                     className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full border border-white shadow-sm"

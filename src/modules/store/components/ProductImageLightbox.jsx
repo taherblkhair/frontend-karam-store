@@ -38,6 +38,7 @@ export function ProductImageLightbox({
   onClose,
   onIndexChange,
   productName = '',
+  markUnavailable = false,
 }) {
   const count = images.length;
   const safeIndex = count ? clamp(index, 0, count - 1) : 0;
@@ -324,6 +325,7 @@ export function ProductImageLightbox({
 
   const media = buildResponsiveMedia(slide.image, { widths: [800, 1200] });
   const label = slide.label || slide.color_name || productName || 'صورة المنتج';
+  const slideUnavailable = markUnavailable && Boolean(slide.unavailable);
 
   return createPortal(
     <div
@@ -408,9 +410,19 @@ export function ProductImageLightbox({
             sizes="100vw"
             alt={label}
             draggable={false}
-            className="max-h-[min(92dvh,100%)] max-w-[min(96vw,100%)] object-contain pointer-events-none select-none"
+            className={`max-h-[min(92dvh,100%)] max-w-[min(96vw,100%)] object-contain pointer-events-none select-none ${
+              slideUnavailable ? 'opacity-60 grayscale-[60%]' : ''
+            }`}
           />
         </div>
+
+        {slideUnavailable && (
+          <div className="absolute top-20 inset-x-0 z-10 flex justify-center pointer-events-none" dir="rtl">
+            <span className="rounded-full bg-white/95 px-4 py-1.5 text-sm font-bold text-ink-800 shadow">
+              غير متوفر
+            </span>
+          </div>
+        )}
 
         {count > 1 && scale <= 1.05 && (
           <>
@@ -459,10 +471,19 @@ export function ProductImageLightbox({
                       ? 'border-secondary-400 ring-2 ring-secondary-400/40'
                       : 'border-white/20 opacity-70 hover:opacity-100'
                   }`}
-                  aria-label={`صورة ${i + 1}`}
+                  aria-label={
+                    markUnavailable && item.unavailable ? `صورة ${i + 1} — غير متوفر` : `صورة ${i + 1}`
+                  }
                   aria-current={active ? 'true' : undefined}
                 >
-                  <img src={m.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                  <img
+                    src={m.src}
+                    alt=""
+                    className={`h-full w-full object-cover ${
+                      markUnavailable && item.unavailable ? 'opacity-40 grayscale' : ''
+                    }`}
+                    draggable={false}
+                  />
                 </button>
               );
             })}
