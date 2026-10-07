@@ -405,27 +405,28 @@ export function ProductForm({
               value={form.brand_id}
               onChange={(e) => setForm({ ...form, brand_id: e.target.value })}
             >
-              <option value="">العلامة التجارية (اختياري)</option>
+              <option value="">البراند (اختياري)</option>
               {brands?.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name_ar}
+                  {b.name_en && b.name_en !== b.name_ar ? `${b.name_en} — ${b.name_ar}` : b.name_ar}
+                  {b.is_active === false ? ' (غير متاح)' : ''}
                 </option>
               ))}
             </select>
             <button
               type="button"
               className="btn-outline shrink-0 px-3"
-              title="إضافة علامة تجارية"
+              title="إضافة براند"
               onClick={() => setShowNewBrand((v) => !v)}
             >
               <Plus size={16} />
             </button>
           </div>
           {showNewBrand && (
-            <InlineCreatePanel title="إضافة علامة تجارية" onClose={() => setShowNewBrand(false)}>
+            <InlineCreatePanel title="إضافة براند سريع (الصورة والترتيب من صفحة البراندات)" onClose={() => setShowNewBrand(false)}>
               <input
                 className="input text-sm"
-                placeholder="اسم العلامة *"
+                placeholder="اسم البراند *"
                 value={newBrand.name_ar}
                 onChange={(e) => setNewBrand({ ...newBrand, name_ar: e.target.value })}
               />
@@ -441,7 +442,7 @@ export function ProductForm({
                 disabled={creating}
                 onClick={createBrand}
               >
-                {creating ? 'جاري الإضافة...' : 'حفظ العلامة واختيارها'}
+                {creating ? 'جاري الإضافة...' : 'حفظ البراند واختياره'}
               </button>
             </InlineCreatePanel>
           )}

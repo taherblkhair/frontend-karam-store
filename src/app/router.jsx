@@ -21,6 +21,7 @@ import AccountPage from '@modules/auth/pages/AccountPage';
 import DashboardPage from '@modules/dashboard/pages/DashboardPage';
 import ProductListPage from '@modules/products/pages/ProductListPage';
 import CategoriesPage from '@modules/categories/pages/CategoriesPage';
+import AdminBrandsPage from '@modules/brands/pages/BrandsPage';
 import InventoryPage from '@modules/inventory/pages/InventoryPage';
 import StocktakingPage from '@modules/inventory/pages/StocktakingPage';
 import PurchasesPage from '@modules/purchases/pages/PurchasesPage';
@@ -73,6 +74,7 @@ export function AppRouter() {
             <Route index element={<DashboardPage />} />
             <Route path="products" element={<ProductListPage />} />
             <Route path="categories" element={<CategoriesPage />} />
+            <Route path="brands" element={<AdminBrandsPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="inventory/stocktaking" element={<StocktakingPage />} />
             <Route path="inventory/stocktaking/:id" element={<StocktakingPage />} />

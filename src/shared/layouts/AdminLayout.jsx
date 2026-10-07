@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, FolderTree, Warehouse, ShoppingBag,
-  Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, X
+  Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, Tag, X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@core/auth/AuthContext';
@@ -11,6 +11,7 @@ const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'لوحة التحكم', end: true },
   { to: '/admin/products', icon: Package, label: 'المنتجات' },
   { to: '/admin/categories', icon: FolderTree, label: 'الفئات' },
+  { to: '/admin/brands', icon: Tag, label: 'البراندات' },
   { to: '/admin/inventory', icon: Warehouse, label: 'المخزون' },
   { to: '/admin/purchases', icon: Truck, label: 'المشتريات' },
   { to: '/admin/suppliers', icon: Truck, label: 'الموردون' },

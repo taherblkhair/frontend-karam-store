@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { storeApi } from '@modules/store/api/store.api';
-import { OptimizedImage } from '@shared/components/OptimizedImage';
+import { BrandLogo } from '@shared/components/BrandLogo';
 import { normalizeArabic } from '@modules/store/components/SearchableSelect';
 
 export function useStoreBrands() {
@@ -73,26 +73,14 @@ export function BrandTile({ brand, className = '' }) {
   return (
     <Link
       to={brandPath(brand)}
-      className={`group card flex min-h-[5.5rem] flex-col items-center justify-center gap-1 px-3 py-3 text-center transition hover:border-primary-300 hover:shadow-md active:scale-[0.98] ${className}`}
+      className={`group card flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-center transition hover:border-primary-300 hover:shadow-md active:scale-[0.98] ${className}`}
     >
-      {brand.logo ? (
-        <OptimizedImage
-          src={brand.logo}
-          alt={primary}
-          className="h-10 w-full"
-          objectFit="contain"
-          sizes="120px"
-          widths={[400]}
-        />
-      ) : (
-        <span className="font-display text-base sm:text-lg font-bold leading-tight text-ink-800 group-hover:text-primary-600 line-clamp-1 transition-colors dark:text-gray-100">
-          {primary}
-        </span>
-      )}
-      {secondary && !brand.logo && (
-        <span className="text-xs text-ink-500 line-clamp-1">{secondary}</span>
-      )}
+      <BrandLogo brand={brand} className="h-14 w-14 text-xl" rounded="rounded-2xl" />
+      <span className="w-full font-display text-sm sm:text-base font-bold leading-tight text-ink-800 group-hover:text-primary-600 line-clamp-1 transition-colors dark:text-gray-100">
+        {primary}
+      </span>
       <span className="text-[11px] font-medium text-primary-600/80 dark:text-primary-300/80">
+        {secondary ? `${secondary} · ` : ''}
         {brand.products_count} منتج
       </span>
     </Link>

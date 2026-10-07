@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
+import { BrandLogo } from '@shared/components/BrandLogo';
 import { storeApi } from '@modules/store/api/store.api';
 import {
   StoreSearchField,
@@ -107,14 +108,21 @@ export default function BrandPage() {
           <span className="text-ink-600 dark:text-gray-300">{primary}</span>
         </nav>
 
-        <header className="mb-5 sm:mb-6">
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-primary-600 leading-tight">
-            {primary}
-          </h1>
-          <p className="mt-1 text-sm text-ink-500">
-            {secondary && <span>{secondary} · </span>}
-            {brand.products_count} منتج
-          </p>
+        <header className="mb-5 sm:mb-6 flex items-center gap-4">
+          <BrandLogo
+            brand={brand}
+            className="h-20 w-20 sm:h-24 sm:w-24 text-3xl border border-ink-100 shadow-sm dark:border-gray-700"
+            rounded="rounded-3xl"
+          />
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-primary-600 leading-tight">
+              {primary}
+            </h1>
+            <p className="mt-1 text-sm text-ink-500">
+              {secondary && <span>{secondary} · </span>}
+              {brand.products_count} منتج
+            </p>
+          </div>
         </header>
 
         <div className="mb-4 flex flex-col gap-3 border-t border-ink-100 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
