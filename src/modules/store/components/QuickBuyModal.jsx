@@ -6,6 +6,7 @@ import { OptimizedImage } from '@shared/components/OptimizedImage';
 import { notifyError, notifySuccess } from '@shared/services/toast.service';
 import { useCart } from '@modules/store/context/CartContext';
 import { productPath } from '@modules/store/utils/productPaths';
+import { flyToCart } from '@modules/store/utils/flyToCart';
 
 const inStock = (v) => Number(v?.stock) > 0;
 const amount = (value) => {
@@ -58,6 +59,7 @@ function Chip({ selected, disabled, onClick, children, swatch }) {
 export function QuickBuyModal({ product, open, onClose, isSaved, onToggleWishlist }) {
   const { addItem } = useCart();
   const closeRef = useRef(null);
+  const thumbRef = useRef(null);
   const variants = useMemo(() => product?.variants || [], [product]);
 
   const colors = useMemo(
@@ -153,6 +155,8 @@ export function QuickBuyModal({ product, open, onClose, isSaved, onToggleWishlis
       notifyError({ message: result?.message });
       return;
     }
+    // Measure the thumbnail before the sheet unmounts; the flying copy lives on <body>.
+    flyToCart(thumbRef.current);
     onClose();
     notifySuccess({ message: `تمت إضافة «${product.name_ar}» إلى السلة` });
   };
@@ -182,6 +186,7 @@ export function QuickBuyModal({ product, open, onClose, isSaved, onToggleWishlis
         <div className="overflow-y-auto overscroll-contain px-5 pb-4 pt-4 sm:pt-5">
           <div className="flex items-start gap-3.5 pe-10">
             <Link
+              ref={thumbRef}
               to={productPath(product)}
               onClick={onClose}
               className="h-24 w-20 shrink-0 overflow-hidden rounded-2xl bg-tertiary-100 ring-1 ring-black/5"

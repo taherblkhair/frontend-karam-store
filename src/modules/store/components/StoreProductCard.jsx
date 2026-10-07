@@ -8,6 +8,7 @@ import { notifyError, notifySuccess } from '@shared/services/toast.service';
 import { storeApi } from '@modules/store/api/store.api';
 import { useCart } from '@modules/store/context/CartContext';
 import { productPath } from '@modules/store/utils/productPaths';
+import { flyToCart } from '@modules/store/utils/flyToCart';
 import { QuickBuyModal } from '@modules/store/components/QuickBuyModal';
 
 const WISHLIST_KEY = 'karam-wishlist-ids';
@@ -155,6 +156,7 @@ export function StoreProductCard({
   const [busyAction, setBusyAction] = useState(null);
   const [modalProduct, setModalProduct] = useState(null);
   const touchRef = useRef(null);
+  const imageRef = useRef(null);
   const swipedRef = useRef(false);
 
   useEffect(() => {
@@ -213,8 +215,10 @@ export function StoreProductCard({
       const variants = full.variants || [];
       if (action === 'cart' && variants.length === 0) {
         const result = addItem(full, null, 1);
-        if (result?.ok) notifySuccess({ message: `تمت إضافة «${full.name_ar}» إلى السلة` });
-        else notifyError({ message: result?.message });
+        if (result?.ok) {
+          flyToCart(imageRef.current);
+          notifySuccess({ message: `تمت إضافة «${full.name_ar}» إلى السلة` });
+        } else notifyError({ message: result?.message });
         return;
       }
       setModalProduct(full);
@@ -232,6 +236,7 @@ export function StoreProductCard({
       className={`group flex flex-col rounded-2xl border border-ink-100/80 bg-white p-2 shadow-sm transition hover:border-primary-600/25 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 ${className}`}
     >
       <div
+        ref={imageRef}
         className="relative overflow-hidden rounded-xl bg-tertiary-100 ring-1 ring-black/[0.04]"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}

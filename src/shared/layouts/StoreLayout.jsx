@@ -1,7 +1,7 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Moon, Sun, Home, Package, UserRound } from 'lucide-react';
-import { useCart } from '@modules/store/context/CartContext';
+import { Moon, Sun, Home, Package, UserRound } from 'lucide-react';
+import { CartIcon } from '@modules/store/components/CartIcon';
 import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
 import { storeApi } from '@modules/store/api/store.api';
@@ -15,7 +15,6 @@ const mobileNavClass = ({ isActive }) =>
   }`;
 
 export default function StoreLayout({ children }) {
-  const { itemCount } = useCart();
   const { dark, toggle } = useTheme();
   const { user } = useAuth();
   const location = useLocation();
@@ -83,12 +82,7 @@ export default function StoreLayout({ children }) {
                 to="/cart"
                 className="relative hidden md:inline-flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <ShoppingCart size={22} />
-                {itemCount > 0 && (
-                  <span className="absolute -top-1 -left-1 bg-primary-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                    {itemCount > 99 ? '99+' : itemCount}
-                  </span>
-                )}
+                <CartIcon size={22} badgeClassName="-top-3 -left-3 text-xs min-w-[1.25rem] h-5 px-1" />
               </Link>
 
               {user ? (
@@ -163,14 +157,7 @@ export default function StoreLayout({ children }) {
           </NavLink>
 
           <NavLink to="/cart" className={mobileNavClass}>
-            <span className="relative inline-flex">
-              <ShoppingCart size={22} strokeWidth={2.25} />
-              {itemCount > 0 && (
-                <span className="absolute -top-2 -left-2.5 bg-primary-600 text-white text-[10px] min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full flex items-center justify-center leading-none">
-                  {itemCount > 99 ? '99+' : itemCount}
-                </span>
-              )}
-            </span>
+            <CartIcon size={22} strokeWidth={2.25} badgeClassName="-top-2 -left-2.5 text-[10px] min-w-[1.1rem] h-[1.1rem] px-0.5" />
             <span className="text-[11px] font-medium">السلة</span>
           </NavLink>
 
