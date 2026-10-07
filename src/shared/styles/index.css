@@ -91,6 +91,18 @@
   }
 }
 
+/* Empty-cart illustration */
+@keyframes karam-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes karam-drop {
+  0% { transform: translateY(-46px) scale(0.6) rotate(-12deg); opacity: 0; }
+  20% { opacity: 1; }
+  55% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  75%, 100% { transform: translateY(10px) scale(0.4); opacity: 0; }
+}
+
 @layer utilities {
   .safe-pb {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
