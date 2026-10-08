@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, Trash2, Printer, Truck, MessageCircle, Save } from 'lucide-react';
+import { Eye, Trash2, Printer, Truck, MessageCircle, Save, RefreshCw } from 'lucide-react';
 import { SabilShipmentCard } from '@modules/orders/components/SabilShipmentCard';
 import { useListParams } from '@shared/hooks/useListParams';
 import { useConfirm } from '@shared/hooks/useConfirm';
@@ -83,6 +83,7 @@ export default function OrdersPage() {
     generateShippingLabel: generateLabelMutation,
     syncSabil: syncSabilMutation,
     refreshSabil: refreshSabilMutation,
+    refreshPendingSabil: refreshPendingSabilMutation,
     removeOrder: deleteMutation,
   } = useOrderMutations(selectedId, {
     onLabelSuccess: (res) => setShippingLabel(res.data.shipping_label || res.data.sabil_reference || ''),
@@ -112,6 +113,32 @@ export default function OrdersPage() {
               <option key={s} value={s}>{ORDER_STATUS[s]?.label || s}</option>
             ))}
           </select>
+          {canShip && (
+            <button
+              type="button"
+              className="btn-primary text-sm whitespace-nowrap"
+              disabled={refreshPendingSabilMutation.isPending}
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'تحديث حالات الشحن',
+                  message:
+                    'سيتم جلب حالة الشحنات غير المسلّمة وغير الملغاة من درب السبيل. إذا كانت الشحنة «تم التسليم» هناك، يُحدَّث الطلب إلى تم التسليم.',
+                  confirmText: 'تحديث الحالات',
+                  variant: 'default',
+                });
+                if (!ok) return;
+                refreshPendingSabilMutation.mutate();
+              }}
+            >
+              <RefreshCw
+                size={15}
+                className={refreshPendingSabilMutation.isPending ? 'animate-spin' : ''}
+              />
+              {refreshPendingSabilMutation.isPending
+                ? 'جاري تحديث الحالات...'
+                : 'تحديث حالات الشحن'}
+            </button>
+          )}
         </div>
       </div>
 

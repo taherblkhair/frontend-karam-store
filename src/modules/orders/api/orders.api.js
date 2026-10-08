@@ -11,5 +11,7 @@ export const ordersApi = {
   generateShippingLabel: (id) => api.post(`${endpoints.orders}/${id}/shipping-label/generate`),
   syncSabil: (id, data = {}) => api.post(`${endpoints.orders}/${id}/sabil/sync`, data),
   refreshSabil: (id) => api.post(`${endpoints.orders}/${id}/sabil/refresh`),
+  refreshPendingSabil: () =>
+    api.post(`${endpoints.orders}/sabil/refresh-pending`, {}, { timeout: 120000 }),
   remove: (id) => api.delete(`${endpoints.orders}/${id}`),
 };
