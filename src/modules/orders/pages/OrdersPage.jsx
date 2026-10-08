@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Eye, Trash2, Printer, Truck, MessageCircle, Save } from 'lucide-react';
+import { SabilShipmentCard } from '@modules/orders/components/SabilShipmentCard';
 import { useListParams } from '@shared/hooks/useListParams';
 import { useConfirm } from '@shared/hooks/useConfirm';
 import { useOrders, useOrder, useOrderMutations, useStoreSettings } from '@modules/orders/hooks/useOrders';
@@ -81,6 +82,7 @@ export default function OrdersPage() {
     updateShippingLabel: shippingMutation,
     generateShippingLabel: generateLabelMutation,
     syncSabil: syncSabilMutation,
+    refreshSabil: refreshSabilMutation,
     removeOrder: deleteMutation,
   } = useOrderMutations(selectedId, {
     onLabelSuccess: (res) => setShippingLabel(res.data.shipping_label || res.data.sabil_reference || ''),
@@ -288,59 +290,11 @@ export default function OrdersPage() {
                 <h3 className="font-bold flex items-center gap-2"><Truck size={18} /> بوليصة الشحن / درب السبيل</h3>
 
                 {order.source === 'online' && (
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm space-y-1.5 bg-gray-50/80 dark:bg-gray-800/50">
-                    <div className="font-medium text-gray-700 dark:text-gray-200">حالة درب السبيل</div>
-                    {order.sabil_shipment_id ? (
-                      <>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                          <span>
-                            المرجع:{' '}
-                            <strong className="text-primary-600">
-                              {order.sabil_reference || order.shipping_label || '—'}
-                            </strong>
-                          </span>
-                          {order.sabil_status ? (
-                            <span>
-                              الحالة: <strong>{order.sabil_status}</strong>
-                            </span>
-                          ) : null}
-                        </div>
-                        {order.sabil_synced_at ? (
-                          <p className="text-xs text-gray-500">
-                            آخر مزامنة:{' '}
-                            {new Date(order.sabil_synced_at).toLocaleString('ar')}
-                          </p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="text-amber-700 dark:text-amber-300">
-                        {order.status === 'new' || order.status === 'pending_confirmation'
-                          ? 'تُنشأ الشحنة تلقائياً عند تأكيد الطلب.'
-                          : 'لم تُنشأ شحنة في درب السبيل بعد'}
-                        {order.sabil_error ? ' (فشلت المحاولة السابقة)' : ''}.
-                      </p>
-                    )}
-                    {order.sabil_error ? (
-                      <p className="text-xs text-red-600 dark:text-red-400 break-words">
-                        {order.sabil_error}
-                      </p>
-                    ) : null}
-                    {!order.sabil_shipment_id && (
-                      <button
-                        type="button"
-                        className="btn-primary text-sm mt-2"
-                        disabled={syncSabilMutation.isPending}
-                        onClick={() => syncSabilMutation.mutate({})}
-                      >
-                        <Truck size={14} />
-                        {syncSabilMutation.isPending
-                          ? 'جاري الإرسال...'
-                          : order.sabil_error
-                            ? 'إعادة المحاولة — درب السبيل'
-                            : 'إرسال إلى درب السبيل'}
-                      </button>
-                    )}
-                  </div>
+                  <SabilShipmentCard
+                    order={order}
+                    syncMutation={syncSabilMutation}
+                    refreshMutation={refreshSabilMutation}
+                  />
                 )}
 
                 <div className="flex flex-wrap gap-2">
@@ -352,7 +306,7 @@ export default function OrdersPage() {
                   />
                   <button onClick={() => shippingMutation.mutate(shippingLabel || order.shipping_label)} className="btn-secondary text-sm">حفظ</button>
                   <button onClick={() => generateLabelMutation.mutate()} disabled={generateLabelMutation.isPending} className="btn-primary text-sm">
-                    {order.source === 'online' ? 'إنشاء / مزامنة البوليصة' : 'إنشاء بوليصة'}
+                    {order.source === 'online' ? 'إنشاء البوليصة' : 'إنشاء بوليصة'}
                   </button>
                 </div>
                 {order.shipping_label && <p className="text-sm text-green-600">البوليصة الحالية: {order.shipping_label}</p>}

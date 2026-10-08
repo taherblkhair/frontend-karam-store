@@ -90,6 +90,15 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
     onError: notifyError,
   });
 
+  const refreshSabil = useMutation({
+    mutationFn: () => ordersApi.refreshSabil(selectedId),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(res);
+    },
+    onError: notifyError,
+  });
+
   const removeOrder = useMutation({
     mutationFn: ordersApi.remove,
     onSuccess: (res) => {
@@ -105,6 +114,7 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
     updateShippingLabel,
     generateShippingLabel,
     syncSabil,
+    refreshSabil,
     removeOrder,
   };
 }

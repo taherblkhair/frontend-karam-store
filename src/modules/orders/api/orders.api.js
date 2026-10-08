@@ -10,5 +10,6 @@ export const ordersApi = {
     api.patch(`${endpoints.orders}/${id}/shipping-label`, { shipping_label }),
   generateShippingLabel: (id) => api.post(`${endpoints.orders}/${id}/shipping-label/generate`),
   syncSabil: (id, data = {}) => api.post(`${endpoints.orders}/${id}/sabil/sync`, data),
+  refreshSabil: (id) => api.post(`${endpoints.orders}/${id}/sabil/refresh`),
   remove: (id) => api.delete(`${endpoints.orders}/${id}`),
 };
