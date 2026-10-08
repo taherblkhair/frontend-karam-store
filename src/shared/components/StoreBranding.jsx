@@ -4,7 +4,8 @@ import { storeApi } from '@modules/store/api/store.api';
 import { resolveMediaUrl } from '@core/api/config.js';
 
 const DEFAULT_FAVICON = '/favicon-32x32.png';
-const DEFAULT_TITLE = 'كرم للحقائب | Karam Bags';
+const TITLE_TAGLINE = 'حقائب وأحذية نسائية في ليبيا';
+const DEFAULT_TITLE = `كرم للحقائب | ${TITLE_TAGLINE} – الدفع عند الاستلام`;
 
 function setLinkRel(rel, href, attrs = {}) {
   if (!href) return;
@@ -34,7 +35,7 @@ export function useStoreBranding() {
 
   useEffect(() => {
     const name = String(settings.store_name || '').trim();
-    document.title = name ? `${name} | Karam Bags` : DEFAULT_TITLE;
+    document.title = name ? `${name} | ${TITLE_TAGLINE}` : DEFAULT_TITLE;
 
     const logo = resolveMediaUrl(settings.logo);
     const href = logo || DEFAULT_FAVICON;
