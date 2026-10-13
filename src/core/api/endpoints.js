@@ -49,6 +49,7 @@ export const endpoints = {
   reports: {
     sales: '/reports/sales',
     profit: '/reports/profit',
+    profitAnalysis: '/reports/profit-analysis',
     inventory: '/reports/inventory',
     stockAvailability: '/reports/stock-availability',
     products: '/reports/products',

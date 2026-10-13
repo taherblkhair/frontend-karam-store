@@ -13,9 +13,24 @@ const emptyVariant = () => ({
   sku: '',
   barcode: '',
   price: '',
+  cost_price: '',
   stock: '',
   image: '',
 });
+
+function costInputValue(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return '';
+  return value;
+}
+
+function parseCostField(value) {
+  if (value === '' || value == null) return null;
+  const num = parseFloat(value);
+  if (!Number.isFinite(num) || num <= 0) return null;
+  return num;
+}
 
 const defaultForm = {
   name_ar: '',
@@ -89,6 +104,7 @@ export function ProductForm({
     stock: true,
     size_id: true,
     price: true,
+    cost_price: true,
   });
 
   useEffect(() => {
@@ -110,7 +126,7 @@ export function ProductForm({
         name_en: initial.name_en || '',
         price: initial.price || '',
         compare_price: initial.compare_price || '',
-        cost_price: initial.cost_price || '',
+        cost_price: costInputValue(initial.cost_price),
         sku: initial.sku || '',
         barcode: initial.barcode || '',
         description: initial.description || '',
@@ -130,6 +146,7 @@ export function ProductForm({
               sku: v.sku || '',
               barcode: v.barcode || '',
               price: v.price || '',
+              cost_price: costInputValue(v.cost_price),
               stock: v.stock ?? '',
               image: v.image || '',
             }))
@@ -159,6 +176,7 @@ export function ProductForm({
       if (applyFields.stock) next.stock = first.stock;
       if (applyFields.size_id) next.size_id = first.size_id;
       if (applyFields.price) next.price = first.price;
+      if (applyFields.cost_price) next.cost_price = first.cost_price;
       return next;
     });
     setForm({ ...form, variants });
@@ -269,6 +287,7 @@ export function ProductForm({
       for (const v of form.variants) {
         if (isNegativeNumber(v.stock)) return 'كمية المتغير لا يمكن أن تكون سالبة';
         if (isNegativeNumber(v.price)) return 'سعر المتغير لا يمكن أن يكون سالباً';
+        if (isNegativeNumber(v.cost_price)) return 'تكلفة شراء المتغير لا يمكن أن تكون سالبة';
       }
     }
     return '';
@@ -289,7 +308,7 @@ export function ProductForm({
       name_en: form.name_en || null,
       price: parseFloat(form.price),
       compare_price: form.compare_price !== '' ? parseFloat(form.compare_price) : null,
-      cost_price: form.cost_price !== '' ? parseFloat(form.cost_price) : 0,
+      cost_price: parseCostField(form.cost_price),
       sku: form.sku || null,
       barcode: form.barcode || null,
       description: form.description || null,
@@ -312,6 +331,7 @@ export function ProductForm({
           sku: v.sku || null,
           barcode: v.barcode || null,
           price: v.price !== '' ? parseFloat(v.price) : parseFloat(form.price),
+          cost_price: parseCostField(v.cost_price),
           stock: v.stock !== '' ? parseInt(v.stock, 10) : 0,
           image: v.image || null,
         }));
@@ -361,6 +381,22 @@ export function ProductForm({
           />
           <FieldError message={getFieldError('compare_price')} />
         </div>
+      </div>
+
+      <div>
+        <input
+          className="input"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="تكلفة الشراء"
+          value={form.cost_price}
+          onChange={(e) => setForm({ ...form, cost_price: e.target.value })}
+        />
+        <p className="text-xs text-ink-400 mt-1">
+          اترك الحقل فارغاً إذا لم تُحدَّد التكلفة بعد. لا تُحسب الأرباح للصنف حتى تُدخل تكلفة أكبر من صفر.
+        </p>
+        <FieldError message={getFieldError('cost_price')} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -559,6 +595,14 @@ export function ProductForm({
                   />
                   السعر
                 </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={applyFields.cost_price}
+                    onChange={(e) => setApplyFields((f) => ({ ...f, cost_price: e.target.checked }))}
+                  />
+                  التكلفة
+                </label>
               </div>
               <button
                 type="button"
@@ -728,6 +772,18 @@ export function ProductForm({
                     onChange={(e) => updateVariant(idx, 'price', e.target.value)}
                   />
                   <FieldError message={getFieldError(`variants.${idx}.price`)} />
+                </div>
+                <div className="sm:col-span-2">
+                  <input
+                    className="input text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="تكلفة شراء المتغير (اختياري — الافتراضي تكلفة المنتج)"
+                    value={v.cost_price}
+                    onChange={(e) => updateVariant(idx, 'cost_price', e.target.value)}
+                  />
+                  <FieldError message={getFieldError(`variants.${idx}.cost_price`)} />
                 </div>
               </div>
 

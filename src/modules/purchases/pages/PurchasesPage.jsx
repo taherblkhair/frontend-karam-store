@@ -213,6 +213,13 @@ export default function PurchasesPage() {
         notifyError({ message: 'هذا المتغير مضاف مسبقاً في الفاتورة' });
         return;
       }
+      const current = form.items[idx];
+      const variant = current?.variants?.find((v) => String(v.id) === String(value));
+      const variantCost = variant?.cost_price;
+      if (variantCost != null && Number(variantCost) > 0) {
+        updateItem(idx, { variant_id: value, unit_cost: String(variantCost) });
+        return;
+      }
     }
     updateItem(idx, { [field]: value });
   };

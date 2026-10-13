@@ -3,7 +3,12 @@ import { endpoints } from '@core/api/endpoints';
 
 export const reportsApi = {
   sales: () => api.get(endpoints.reports.sales),
-  profit: () => api.get(endpoints.reports.profit),
+  profit: (params) => api.get(endpoints.reports.profit, { params }),
+  profitAnalysis: (params) =>
+    api.get(endpoints.reports.profitAnalysis, {
+      params,
+      timeout: params?.export ? 60000 : undefined,
+    }),
   inventory: () => api.get(endpoints.reports.inventory),
   stockAvailability: (params) =>
     api.get(endpoints.reports.stockAvailability, {
