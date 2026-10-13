@@ -50,6 +50,7 @@ export const endpoints = {
     sales: '/reports/sales',
     profit: '/reports/profit',
     inventory: '/reports/inventory',
+    stockAvailability: '/reports/stock-availability',
     products: '/reports/products',
   },
 };

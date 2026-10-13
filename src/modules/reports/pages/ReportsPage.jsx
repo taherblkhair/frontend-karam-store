@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { reportsApi } from '@modules/reports/api/reports.api';
+import { StockAvailabilityReport } from '@modules/reports/components/StockAvailabilityReport';
 import { LoadingSpinner } from '@shared/ui';
 import { formatPrice } from '@core/constants';
 import { TableScroll } from '@shared/components/TableScroll';
@@ -44,6 +45,10 @@ export default function ReportsPage() {
           <h3 className="text-gray-500 mb-2">قيمة المخزون</h3>
           <p className="text-2xl font-bold">{formatPrice(inventory?.data?.reduce((s, i) => s + parseFloat(i.stock_value || 0), 0))}</p>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <StockAvailabilityReport />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
