@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, ShoppingBag, Package, Users, AlertTriangle, TrendingUp } from 'lucide-react';
+import { DollarSign, ShoppingBag, Package, AlertTriangle, TrendingUp, Wallet } from 'lucide-react';
 import { dashboardApi } from '@modules/dashboard/api/dashboard.api';
 import { StatCard, LoadingSpinner, OrderStatusBadge } from '@shared/ui';
 import { formatPrice } from '@core/constants';
@@ -24,6 +24,11 @@ export default function DashboardPage() {
         <StatCard title="طلبات اليوم" value={stats?.salesToday?.count || 0} icon={ShoppingBag} color="blue" />
         <StatCard title="مبيعات الشهر" value={formatPrice(stats?.salesMonth?.total)} icon={TrendingUp} color="primary" />
         <StatCard title="المنتجات" value={stats?.productCount || 0} icon={Package} color="orange" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <StatCard title="أرباح اليوم" value={formatPrice(stats?.profitToday?.profit)} icon={Wallet} color="green" />
+        <StatCard title="أرباح هذا الشهر" value={formatPrice(stats?.profitMonth?.profit)} icon={TrendingUp} color="primary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
