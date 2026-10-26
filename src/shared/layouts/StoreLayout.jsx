@@ -4,7 +4,7 @@ import { Moon, Sun, Home, Package, UserRound } from 'lucide-react';
 import { CartIcon } from '@modules/store/components/CartIcon';
 import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
-import { storeApi } from '@modules/store/api/store.api';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { SocialMediaLinks } from '@modules/store/components/SocialMediaLinks';
 
 const mobileNavClass = ({ isActive }) =>
@@ -20,8 +20,7 @@ export default function StoreLayout({ children }) {
   const location = useLocation();
 
   const { data: settingsData } = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => storeApi.settings(),
+    ...storeSettingsQuery,
     staleTime: 60_000,
   });
   const settings = settingsData?.data || {};

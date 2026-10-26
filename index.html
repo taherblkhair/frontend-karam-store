@@ -22,11 +22,17 @@
         n.loaded=!0;
         n.version='2.0';
         n.queue=[];
-        t=b.createElement(e);
-        t.async=!0;
-        t.src=v;
-        s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s);
+        // Queued fbq() calls are replayed once fbevents.js loads; fetching it after
+        // the page's own load keeps it from competing with the store's JS & images.
+        var load=function(){
+          t=b.createElement(e);
+          t.async=!0;
+          t.src=v;
+          s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s);
+        };
+        if(b.readyState==='complete') load();
+        else f.addEventListener('load',function(){ setTimeout(load,0); });
       }(
         window,
         document,
@@ -65,13 +71,52 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
 
+    <!-- karam:preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
+    <!-- Non-render-blocking font CSS (display=swap keeps text visible meanwhile) -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+      />
+    </noscript>
+
+    <!--
+      Start storefront API requests while the JS bundle is still downloading.
+      Consumed once by src/core/api/earlyFetch.js (keys are API paths).
+    -->
+    <script>
+      (function () {
+        if (!window.fetch || !window.Promise) return;
+        var base = '%KARAM_API_BASE%';
+        var store = {};
+        function get(path) {
+          store[path] = fetch(base + path, { credentials: 'omit' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+        }
+        var path = location.pathname.replace(/\/+$/, '') || '/';
+        if (/^\/(login|admin)(\/|$)/.test(path)) return;
+        get('/store/settings');
+        if (path === '/') get('/store/home');
+        var m = path.match(/^\/product\/([^/]+)$/);
+        if (m) {
+          var slug = m[1];
+          try { slug = decodeURIComponent(slug); } catch (e) {}
+          slug = slug.trim();
+          if (slug) get('/store/products/slug/' + encodeURIComponent(slug));
+        }
+        window.__KARAM_EARLY_FETCH__ = store;
+      })();
+    </script>
 
     <title>كرم للحقائب | حقائب وأحذية نسائية في ليبيا – الدفع عند الاستلام</title>
   </head>

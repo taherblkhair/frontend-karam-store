@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, mediaVariantUrl } from '@core/api/config.js';
 
 /**
  * Optimized product/media image:
@@ -28,6 +28,9 @@ export function OptimizedImage({
     preferSrcWidth,
   });
   const displaySrc = media.src;
+  // Small 400w copy (usually already cached from the product card) shown while the large one loads
+  const previewSrc = priority && media.srcSet ? mediaVariantUrl(src, 400) : '';
+  const showPreview = Boolean(previewSrc) && previewSrc !== displaySrc;
 
   useEffect(() => {
     setLoaded(false);
@@ -55,6 +58,18 @@ export function OptimizedImage({
         <div
           className="absolute inset-0 animate-pulse bg-gradient-to-br from-tertiary-100 via-tertiary-200 to-tertiary-100"
           aria-hidden
+        />
+      )}
+      {showPreview && (
+        <img
+          src={previewSrc}
+          alt=""
+          aria-hidden
+          decoding="async"
+          draggable={false}
+          className={`absolute inset-0 w-full h-full ${
+            objectFit === 'contain' ? 'object-contain' : 'object-cover'
+          } ${imgClassName}`}
         />
       )}
 

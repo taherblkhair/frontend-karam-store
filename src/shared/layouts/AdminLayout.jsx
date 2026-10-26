@@ -3,9 +3,10 @@ import {
   LayoutDashboard, Package, FolderTree, Warehouse, ShoppingBag,
   Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, Tag, X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useAuth } from '@core/auth/AuthContext';
 import { useTheme } from '@core/config/ThemeContext';
+import { LoadingSpinner } from '@shared/ui';
 
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'لوحة التحكم', end: true },
@@ -175,7 +176,9 @@ export default function AdminLayout() {
             isPos ? 'p-2 sm:p-4' : 'p-3 sm:p-4 lg:p-6'
           }`}
         >
-          <Outlet />
+          <Suspense fallback={<LoadingSpinner />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

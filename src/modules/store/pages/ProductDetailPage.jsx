@@ -121,6 +121,7 @@ export default function ProductDetailPage() {
     queryKey: ['product', slug],
     queryFn: () => storeApi.productBySlug(slug),
     enabled: Boolean(slug),
+    staleTime: 30_000,
   });
 
   const product = data?.data;

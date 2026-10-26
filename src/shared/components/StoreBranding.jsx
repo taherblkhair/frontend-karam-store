@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { storeApi } from '@modules/store/api/store.api';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { resolveMediaUrl } from '@core/api/config.js';
 
 const DEFAULT_FAVICON = '/favicon-32x32.png';
@@ -26,8 +26,7 @@ function setLinkRel(rel, href, attrs = {}) {
  */
 export function useStoreBranding() {
   const { data } = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => storeApi.settings(),
+    ...storeSettingsQuery,
     staleTime: 60_000,
   });
 

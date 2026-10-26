@@ -197,14 +197,19 @@ export function StoreProductCard({
     go(dx > 0 ? 1 : -1);
   };
 
+  const fullProductQuery = {
+    queryKey: ['product', product.slug],
+    queryFn: () => storeApi.productBySlug(product.slug),
+    staleTime: 60_000,
+  };
+
   const loadFullProduct = () =>
-    queryClient
-      .fetchQuery({
-        queryKey: ['product', product.slug],
-        queryFn: () => storeApi.productBySlug(product.slug),
-        staleTime: 60_000,
-      })
-      .then((res) => res?.data);
+    queryClient.fetchQuery(fullProductQuery).then((res) => res?.data);
+
+  // Warm the product page on hover / touch so it opens without a spinner
+  const prefetchFullProduct = () => {
+    if (product.slug) queryClient.prefetchQuery(fullProductQuery);
+  };
 
   const runQuickAction = async (action) => {
     if (busyAction) return;
@@ -234,6 +239,9 @@ export function StoreProductCard({
   return (
     <article
       className={`group flex flex-col rounded-2xl border border-ink-100/80 bg-white p-2 shadow-sm transition hover:border-primary-600/25 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 ${className}`}
+      onMouseEnter={prefetchFullProduct}
+      onTouchStart={prefetchFullProduct}
+      onFocus={prefetchFullProduct}
     >
       <div
         ref={imageRef}

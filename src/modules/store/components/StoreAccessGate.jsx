@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { storeApi } from '@modules/store/api/store.api';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { LoadingSpinner } from '@shared/ui';
 import SiteClosedPage from '@modules/store/pages/SiteClosedPage';
 import {
@@ -15,8 +15,7 @@ import {
  */
 export default function StoreAccessGate() {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => storeApi.settings(),
+    ...storeSettingsQuery,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
