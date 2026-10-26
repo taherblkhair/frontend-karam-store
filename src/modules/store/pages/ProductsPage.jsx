@@ -322,17 +322,22 @@ export default function ProductsPage() {
             <h1 className="text-2xl sm:text-3xl text-primary-600">
               {pageHeading}
             </h1>
-            {total != null && (
-              <p className="text-sm text-ink-400 mt-1">
-                {total} منتج
-                {activeCategory ? (
-                  <span className="text-ink-500">
-                    {' '}
-                    · مفلتر حسب «{activeCategory.name_ar}»
-                  </span>
-                ) : null}
-              </p>
-            )}
+            {/* Line height is reserved while loading so the filters / grid don't jump */}
+            <p className="text-sm text-ink-400 mt-1">
+              {total != null ? (
+                <>
+                  {total} منتج
+                  {activeCategory ? (
+                    <span className="text-ink-500">
+                      {' '}
+                      · مفلتر حسب «{activeCategory.name_ar}»
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                '\u00A0'
+              )}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
