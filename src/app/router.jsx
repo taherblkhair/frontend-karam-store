@@ -57,6 +57,12 @@ const BannersPage = lazyPage(() => import('@modules/banners/pages/BannersPage'))
 const OrdersPage = lazyPage(() => import('@modules/orders/pages/OrdersPage'));
 const CustomersPage = lazyPage(() => import('@modules/customers/pages/CustomersPage'));
 const ReportsPage = lazyPage(() => import('@modules/reports/pages/ReportsPage'));
+const ProfitReportPage = lazyPage(() => import('@modules/reports/pages/ProfitReportPage'));
+const SalesReportPage = lazyPage(() => import('@modules/reports/pages/SalesReportPage'));
+const InventoryReportPage = lazyPage(() => import('@modules/reports/pages/InventoryReportPage'));
+const StockAvailabilityReportPage = lazyPage(() =>
+  import('@modules/reports/pages/StockAvailabilityReportPage')
+);
 const SettingsPage = lazyPage(() => import('@modules/settings/pages/SettingsPage'));
 const UsersPage = lazyPage(() => import('@modules/users/pages/UsersPage'));
 const POSPage = lazyPage(() => import('@modules/sales/pages/POSPage'));
@@ -121,6 +127,10 @@ export function AppRouter() {
               <Route path="customers" element={<CustomersPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="reports/profit" element={<ProfitReportPage />} />
+              <Route path="reports/sales" element={<SalesReportPage />} />
+              <Route path="reports/inventory" element={<InventoryReportPage />} />
+              <Route path="reports/stock-availability" element={<StockAvailabilityReportPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="pos" element={<POSPage />} />
               <Route path="*" element={<NotFoundPage bare />} />
