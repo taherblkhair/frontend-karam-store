@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { Eye, Trash2, Printer, Truck, MessageCircle, Save, RefreshCw } from 'lucide-react';
+import { Eye, Trash2, Printer, Truck, MessageCircle, Save, RefreshCw, PackageCheck } from 'lucide-react';
 import { SabilShipmentCard } from '@modules/orders/components/SabilShipmentCard';
+import { PartialDeliveryModal } from '@modules/orders/components/PartialDeliveryModal';
+import { OrderItemEventsLog } from '@modules/orders/components/OrderItemEventsLog';
+import {
+  ItemStatusBadge,
+  itemRemaining,
+  itemOrderedQuantity,
+} from '@modules/orders/components/OrderItemStatus';
 import { useListParams } from '@shared/hooks/useListParams';
 import { useConfirm } from '@shared/hooks/useConfirm';
 import { useOrders, useOrder, useOrderMutations, useStoreSettings } from '@modules/orders/hooks/useOrders';
@@ -68,6 +75,7 @@ export default function OrdersPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [shippingLabel, setShippingLabel] = useState('');
+  const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
 
   const listParams = withExtra({ status: statusFilter || undefined });
 
@@ -78,6 +86,7 @@ export default function OrdersPage() {
 
   const {
     updateStatus: statusMutation,
+    updateItemsFulfillment: fulfillmentMutation,
     updateOrder: updateMutation,
     updateShippingLabel: shippingMutation,
     generateShippingLabel: generateLabelMutation,
@@ -100,6 +109,16 @@ export default function OrdersPage() {
   const allowedStatuses = isAdmin ? STATUS_OPTIONS.admin : STATUS_OPTIONS.sales;
   const canManage = isAdmin || hasPermission('orders.manage');
   const canShip = hasPermission('shipping.create') || canManage;
+  const canFulfill = canManage || hasPermission('orders.confirm');
+  const fulfillment = order?.fulfillment;
+  const hasItemChanges =
+    !!fulfillment &&
+    (fulfillment.cancelled_qty > 0 ||
+      fulfillment.returned_qty > 0 ||
+      (fulfillment.delivered_qty > 0 && fulfillment.remaining_qty > 0));
+  const hasOpenItems = (order?.items || []).some((item) => itemRemaining(item) > 0);
+  const showFulfillmentAction =
+    canFulfill && order && !['cancelled', 'returned'].includes(order.status) && hasOpenItems;
 
   return (
     <div className="min-w-0">
@@ -220,6 +239,32 @@ export default function OrdersPage() {
                   <div className="flex justify-between"><span>الخصم</span><span>{formatPrice(order.discount)}</span></div>
                   <div className="flex justify-between"><span>الشحن</span><span>{formatPrice(order.shipping_cost)}</span></div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2"><span>الإجمالي</span><span className="text-primary-600">{formatPrice(order.total)}</span></div>
+                  {hasItemChanges && (
+                    <div className="border-t pt-2 mt-1 space-y-1 text-xs text-ink-500 dark:text-gray-400">
+                      <div className="flex justify-between">
+                        <span>قيمة المسلَّم ({fulfillment.delivered_qty})</span>
+                        <span className="text-emerald-700 dark:text-emerald-300">{formatPrice(fulfillment.delivered_amount)}</span>
+                      </div>
+                      {fulfillment.remaining_qty > 0 && (
+                        <div className="flex justify-between">
+                          <span>قيمة المتبقي ({fulfillment.remaining_qty})</span>
+                          <span>{formatPrice(fulfillment.remaining_amount)}</span>
+                        </div>
+                      )}
+                      {fulfillment.cancelled_qty > 0 && (
+                        <div className="flex justify-between">
+                          <span>ملغي ومُعاد للمخزون ({fulfillment.cancelled_qty})</span>
+                          <span className="text-red-600 line-through">{formatPrice(fulfillment.cancelled_amount)}</span>
+                        </div>
+                      )}
+                      {fulfillment.returned_qty > 0 && (
+                        <div className="flex justify-between">
+                          <span>مرتجع ومُعاد للمخزون ({fulfillment.returned_qty})</span>
+                          <span className="text-orange-600 line-through">{formatPrice(fulfillment.returned_amount)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => printOrderInvoice(order, settingsData?.data?.store_name)} className="btn-outline text-sm">
@@ -238,12 +283,23 @@ export default function OrdersPage() {
             </div>
 
             <div>
-              <h3 className="font-bold mb-3">المنتجات والنسخ المحددة</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 className="font-bold">المنتجات والنسخ المحددة</h3>
+                {showFulfillmentAction && (
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm"
+                    onClick={() => setFulfillmentOpen(true)}
+                  >
+                    <PackageCheck size={15} /> تسليم جزئي / إلغاء منتجات
+                  </button>
+                )}
+              </div>
               <div className="space-y-3">
                 {order.items?.map((item) => (
                   <div
                     key={item.id}
-                    className="card p-3 sm:p-4 flex gap-3 sm:gap-4 border border-ink-100 dark:border-gray-700"
+                    className={`card p-3 sm:p-4 flex gap-3 sm:gap-4 border border-ink-100 dark:border-gray-700 ${Number(item.quantity) <= 0 ? 'opacity-60' : ''}`}
                   >
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-tertiary-100 dark:bg-gray-700 shrink-0 ring-1 ring-ink-100 dark:ring-gray-600">
                       {item.image ? (
@@ -259,8 +315,9 @@ export default function OrdersPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-ink-800 dark:text-gray-100">
-                        {item.product_name}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-ink-800 dark:text-gray-100">{item.product_name}</span>
+                        {item.item_status && <ItemStatusBadge status={item.item_status} />}
                       </div>
                       {(item.variant_info || item.color_name || item.size_name || item.variant_id) && (
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -295,6 +352,9 @@ export default function OrdersPage() {
                         </span>
                         <span>
                           الكمية: <strong className="text-ink-800 dark:text-gray-100">{item.quantity}</strong>
+                          {itemOrderedQuantity(item) !== Number(item.quantity) && (
+                            <span className="text-xs"> (من أصل {itemOrderedQuantity(item)})</span>
+                          )}
                         </span>
                         <span>
                           سعر الوحدة:{' '}
@@ -303,6 +363,24 @@ export default function OrdersPage() {
                           </strong>
                         </span>
                       </div>
+                      {(Number(item.delivered_quantity) > 0 ||
+                        Number(item.cancelled_quantity) > 0 ||
+                        Number(item.returned_quantity) > 0) && (
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                          {Number(item.delivered_quantity) > 0 && (
+                            <span className="text-emerald-700 dark:text-emerald-300">مُسلَّم: {item.delivered_quantity}</span>
+                          )}
+                          {itemRemaining(item) > 0 && (
+                            <span className="text-amber-700 dark:text-amber-300">متبقٍ: {itemRemaining(item)}</span>
+                          )}
+                          {Number(item.cancelled_quantity) > 0 && (
+                            <span className="text-red-600 dark:text-red-300">ملغي: {item.cancelled_quantity}</span>
+                          )}
+                          {Number(item.returned_quantity) > 0 && (
+                            <span className="text-orange-600 dark:text-orange-300">مرتجع: {item.returned_quantity}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="text-left shrink-0 font-bold text-primary-600 tabular-nums">
                       {formatPrice(item.total)}
@@ -311,6 +389,8 @@ export default function OrdersPage() {
                 ))}
               </div>
             </div>
+
+            <OrderItemEventsLog events={order.item_events} />
 
             {canShip && (
               <div className="card p-4 space-y-3">
@@ -423,6 +503,16 @@ export default function OrdersPage() {
           </div>
         )}
       </Modal>
+
+      {order && (
+        <PartialDeliveryModal
+          key={order.id}
+          open={fulfillmentOpen && !!selectedId}
+          onClose={() => setFulfillmentOpen(false)}
+          order={order}
+          mutation={fulfillmentMutation}
+        />
+      )}
     </div>
   );
 }

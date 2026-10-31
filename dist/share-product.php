@@ -77,7 +77,7 @@ if (function_exists('curl_init')) {
 
 if (!$html) {
     // Soft fallback: still redirect humans; crawler may show site default only once.
-    $fallbackUrl = $front . '/product/' . rawurlencode($slug);
+    $fallbackUrl = $front . '/product/' . rawurlencode($slug) . '?via=share';
     echo '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">'
         . '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($fallbackUrl, ENT_QUOTES, 'UTF-8') . '">'
         . '<title>كرم للحقائب</title></head><body>'

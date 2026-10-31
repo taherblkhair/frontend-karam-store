@@ -6,6 +6,8 @@ export const ordersApi = {
   getById: (id) => api.get(`${endpoints.orders}/${id}`),
   update: (id, data) => api.put(`${endpoints.orders}/${id}`, data),
   updateStatus: (id, status) => api.patch(`${endpoints.orders}/${id}/status`, { status }),
+  updateItemsFulfillment: (id, data) =>
+    api.post(`${endpoints.orders}/${id}/items/fulfillment`, data),
   updateShippingLabel: (id, shipping_label) =>
     api.patch(`${endpoints.orders}/${id}/shipping-label`, { shipping_label }),
   generateShippingLabel: (id) => api.post(`${endpoints.orders}/${id}/shipping-label/generate`),

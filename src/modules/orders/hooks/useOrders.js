@@ -32,7 +32,10 @@ export function useStoreSettings() {
   });
 }
 
-export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess, onLabelSuccess } = {}) {
+export function useOrderMutations(
+  selectedId,
+  { onStatusSuccess, onUpdateSuccess, onLabelSuccess, onFulfillmentSuccess } = {}
+) {
   const queryClient = useQueryClient();
 
   const invalidate = () => {
@@ -46,6 +49,19 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
       invalidate();
       notifySuccess(res);
       onStatusSuccess?.(res);
+    },
+    onError: notifyError,
+  });
+
+  const updateItemsFulfillment = useMutation({
+    mutationFn: (payload) => ordersApi.updateItemsFulfillment(selectedId, payload),
+    onSuccess: (res) => {
+      invalidate();
+      queryClient.invalidateQueries({
+        predicate: (q) => String(q.queryKey[0]).startsWith('inventory'),
+      });
+      notifySuccess(res);
+      onFulfillmentSuccess?.(res);
     },
     onError: notifyError,
   });
@@ -119,6 +135,7 @@ export function useOrderMutations(selectedId, { onStatusSuccess, onUpdateSuccess
 
   return {
     updateStatus,
+    updateItemsFulfillment,
     updateOrder,
     updateShippingLabel,
     generateShippingLabel,

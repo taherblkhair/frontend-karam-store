@@ -1,0 +1,1 @@
+import{j as o}from"./vendor-react-B-F1kIKg.js";function s({children:r,className:e=""}){return o.jsx("div",{className:`card overflow-hidden ${e}`,children:o.jsx("div",{className:"overflow-x-auto overscroll-x-contain touch-pan-x",style:{WebkitOverflowScrolling:"touch"},children:r})})}export{s as T};

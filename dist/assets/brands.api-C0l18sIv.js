@@ -1,0 +1,1 @@
+import{k as s,l as r}from"./index-HmXe97EX.js";const a={list:()=>s.get(r.brands),create:e=>s.post(r.brands,{...e,strict:!0}),update:(e,t)=>s.put(`${r.brands}/${e}`,t),remove:e=>s.delete(`${r.brands}/${e}`),save:({id:e,data:t})=>e?a.update(e,t):a.create(t)};export{a as b};

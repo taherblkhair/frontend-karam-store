@@ -1,0 +1,6 @@
+import{f as n,k as e,l as o}from"./index-HmXe97EX.js";/**
+ * @license lucide-react v0.447.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const i=n("ClipboardList",[["rect",{width:"8",height:"4",x:"8",y:"2",rx:"1",ry:"1",key:"tgr4d6"}],["path",{d:"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2",key:"116196"}],["path",{d:"M12 11h4",key:"1jrz19"}],["path",{d:"M12 16h4",key:"n85exb"}],["path",{d:"M8 11h.01",key:"1dfujw"}],["path",{d:"M8 16h.01",key:"18s6g9"}]]),r={movements:t=>e.get(o.inventory.movements,{params:t}),levels:t=>e.get(o.inventory.levels,{params:t}),lowStock:()=>e.get(o.inventory.lowStock),adjust:t=>e.post(o.inventory.adjust,t),productsLookup:()=>e.get(o.products,{params:{admin:"true",limit:200}}),stocktakings:{list:t=>e.get(o.inventory.stocktakings,{params:t}),get:t=>e.get(`${o.inventory.stocktakings}/${t}`),create:(t={})=>e.post(o.inventory.stocktakings,t),updateItems:(t,s)=>e.patch(`${o.inventory.stocktakings}/${t}/items`,{items:s}),apply:t=>e.post(`${o.inventory.stocktakings}/${t}/apply`),cancel:t=>e.post(`${o.inventory.stocktakings}/${t}/cancel`)}};export{i as C,r as i};

@@ -14,6 +14,7 @@ function itemVariantLabel(item) {
 export function printOrderInvoice(order, storeName = 'متجر كرم') {
   const statusLabel = ORDER_STATUS[order.status]?.label || order.status;
   const itemsRows = (order.items || [])
+    .filter((item) => Number(item.quantity) > 0)
     .map((item) => {
       const variant = itemVariantLabel(item);
       const img = item.image ? resolveMediaUrl(item.image) : '';
