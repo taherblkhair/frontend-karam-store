@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, TimerOff } from 'lucide-react';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner, EmptyState } from '@shared/ui';
-import { OptimizedImage } from '@shared/components/OptimizedImage';
+import { buildResponsiveMedia } from '@core/api/config.js';
 import { StoreProductCard } from '@modules/store/components/StoreProductCard';
 import NotFoundPage from '@modules/store/pages/NotFoundPage';
 import { storeCampaignsApi } from '@modules/campaigns/api/campaigns.api';
@@ -80,6 +80,7 @@ export default function CampaignPage({ slug: slugProp }) {
   if (!campaign) return <NotFoundPage />;
 
   const isLive = campaign.status === 'active';
+  const banner = buildResponsiveMedia(campaign.banner_image, { widths: [800, 1200] });
 
   return (
     <StoreLayout>
@@ -91,14 +92,19 @@ export default function CampaignPage({ slug: slugProp }) {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-ink-800 text-white">
-        {campaign.banner_image ? (
-          <OptimizedImage
-            src={campaign.banner_image}
-            alt={campaign.name_ar}
-            className="absolute inset-0 h-full w-full"
-            imgClassName="object-cover object-center"
+        {banner.src ? (
+          // Full-width hero: same responsive pattern as the home BannerCarousel
+          // (800 / 1200 / full-size master), positioned behind the text.
+          <img
+            src={banner.src}
+            srcSet={banner.srcSet || undefined}
             sizes="100vw"
-            priority
+            alt={campaign.name_ar}
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            draggable={false}
           />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" aria-hidden />
