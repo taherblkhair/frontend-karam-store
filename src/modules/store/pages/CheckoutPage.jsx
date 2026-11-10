@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCircle2, Copy, X } from 'lucide-react';
+import { Check, CheckCircle2, Copy, Share2, Truck, X } from 'lucide-react';
 import {
   notifySuccess,
   notifyError,
@@ -27,6 +27,7 @@ import { OptimizedThumb } from '@shared/components/OptimizedImage';
 import { SearchableSelect } from '@modules/store/components/SearchableSelect';
 import QuickFillPanel from '@modules/store/components/QuickFillPanel';
 import { resolveQuickFill } from '@modules/store/utils/quickFill';
+import { trackOrderPath, trackOrderWhatsAppShareUrl } from '@modules/store/utils/trackOrder';
 
 const PHONE_LENGTH = 10;
 const VALIDATION_TOAST_ID = 'checkout-validation';
@@ -402,6 +403,7 @@ export default function CheckoutPage() {
       <StoreLayout>
         <OrderSuccessView
           order={orderSuccess}
+          storeName={settingsData?.data?.store_name}
           whatsapp={settingsData?.data?.store_whatsapp || '218910000000'}
           onHome={() => navigate('/')}
         />
@@ -704,7 +706,7 @@ function CopyButton({ text, label, copiedLabel = 'تم النسخ', className = 
   );
 }
 
-function OrderSuccessView({ order, whatsapp, onHome }) {
+function OrderSuccessView({ order, storeName, whatsapp, onHome }) {
   const items = order.items || [];
   const location = [order.city_name, order.area_name].filter(Boolean).join(' — ');
   const summaryText = formatOrderSummaryText(order);
@@ -834,11 +836,22 @@ function OrderSuccessView({ order, whatsapp, onHome }) {
       </div>
 
       <div className="flex flex-col gap-3">
+        <Link to={trackOrderPath(order)} className="btn-primary">
+          <Truck size={18} /> تتبع طلبك
+        </Link>
+        <a
+          href={trackOrderWhatsAppShareUrl(order, storeName || 'متجر كرم')}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-outline"
+        >
+          <Share2 size={18} /> مشاركة رابط التتبع عبر واتساب
+        </a>
         <a
           href={getWhatsAppLink(whatsapp, order.order_number)}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-primary"
+          className="btn-outline"
         >
           التواصل مع المتجر عبر WhatsApp
         </a>

@@ -1,6 +1,6 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Moon, Sun, Home, Package, UserRound } from 'lucide-react';
+import { Moon, Sun, Home, Package, UserRound, Truck } from 'lucide-react';
 import { CartIcon } from '@modules/store/components/CartIcon';
 import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
@@ -67,9 +67,20 @@ export default function StoreLayout({ children }) {
               <Link to="/cart" className="hover:text-primary-600 transition">
                 السلة
               </Link>
+              <Link to="/track-order" className="hover:text-primary-600 transition">
+                تتبع الطلب
+              </Link>
             </nav>
 
             <div className="flex items-center gap-2 md:gap-3">
+              <Link
+                to="/track-order"
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="تتبع الطلب"
+                title="تتبع الطلب"
+              >
+                <Truck size={20} />
+              </Link>
               <button
                 type="button"
                 onClick={toggle}
@@ -128,6 +139,9 @@ export default function StoreLayout({ children }) {
               </Link>
               <Link to="/cart" className="block hover:text-white">
                 السلة
+              </Link>
+              <Link to="/track-order" className="block hover:text-white">
+                تتبع الطلب
               </Link>
             </div>
           </div>

@@ -22,4 +22,6 @@ export const storeApi = {
     withEarlyFetch(endpoints.store.settings, () => api.get(endpoints.store.settings)),
   shippingCost: (params) => api.get(endpoints.store.shippingCost, { params }),
   createOrder: (data) => api.post(endpoints.store.orders, data),
+  /** Read-only tracking: { query, phone } or { query, token } */
+  trackOrder: (data) => api.post(`${endpoints.store.orders}/track`, data),
 };

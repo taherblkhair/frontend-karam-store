@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, MapPin } from 'lucide-react';
+import { ChevronLeft, LogOut, MapPin, Truck } from 'lucide-react';
 import { useAuth } from '@core/auth/AuthContext';
 import { storeApi } from '@modules/store/api/store.api';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
@@ -106,6 +106,15 @@ export default function AccountPage() {
             <LogOut size={16} /> خروج
           </button>
         </div>
+
+        <Link
+          to="/track-order"
+          className="card p-4 mb-4 flex items-center gap-3 hover:border-primary-600/40 transition"
+        >
+          <Truck size={20} className="text-primary-600 shrink-0" />
+          <span className="flex-1 font-bold">تتبع طلباتك</span>
+          <ChevronLeft size={18} className="text-ink-400" />
+        </Link>
 
         <form onSubmit={handleSave} className="card p-5 space-y-4">
           <div className="flex items-center gap-2 font-bold mb-1">
