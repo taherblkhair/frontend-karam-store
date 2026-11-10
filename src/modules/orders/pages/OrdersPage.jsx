@@ -13,7 +13,12 @@ import { useConfirm } from '@shared/hooks/useConfirm';
 import { useOrders, useOrder, useOrderMutations, useStoreSettings } from '@modules/orders/hooks/useOrders';
 import { LoadingSpinner, OrderStatusBadge, Modal } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
-import { formatPrice, ORDER_STATUS, getWhatsAppLink } from '@core/constants';
+import { formatPrice, ORDER_STATUS } from '@core/constants';
+import {
+  WHATSAPP_TEMPLATES,
+  customerWhatsAppLink,
+  defaultTemplateKey,
+} from '@modules/orders/utils/whatsappMessage';
 import { printOrderInvoice } from '@shared/services/invoice.service';
 import { useAuth } from '@core/auth/AuthContext';
 import { TableScroll } from '@shared/components/TableScroll';
@@ -66,6 +71,40 @@ const SALES_ACTIONS = [
     confirm: 'تسجيل مرتجع سيعيد الكمية للمخزون. هل أنت متأكد؟',
   },
 ];
+
+/**
+ * One-click WhatsApp to the customer with a ready message (order, items, total, tracking link).
+ * The template matching the status is highlighted; staff can edit the text in WhatsApp.
+ */
+function CustomerWhatsAppActions({ order, storeName }) {
+  const suggested = defaultTemplateKey(order.status);
+  const closed = ['delivered', 'cancelled', 'returned'].includes(order.status);
+  const hasPhone = Boolean(customerWhatsAppLink(order, suggested, storeName));
+
+  if (!hasPhone) {
+    return <p className="text-xs text-red-600">رقم هاتف العميل غير صالح لواتساب — صحّحه في معلومات العميل.</p>;
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-ink-500 dark:text-gray-400">مراسلة العميل عبر واتساب</p>
+      <div className="flex flex-wrap gap-2">
+        {WHATSAPP_TEMPLATES.map((t) => (
+          <a
+            key={t.key}
+            href={customerWhatsAppLink(order, t.key, storeName || 'متجر كرم')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${!closed && t.key === suggested ? 'btn-primary' : 'btn-outline'} text-sm`}
+            title={`فتح محادثة العميل برسالة «${t.label}» جاهزة`}
+          >
+            <MessageCircle size={14} /> {t.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function OrdersPage() {
   const confirm = useConfirm();
@@ -270,15 +309,8 @@ export default function OrdersPage() {
                   <button onClick={() => printOrderInvoice(order, settingsData?.data?.store_name)} className="btn-outline text-sm">
                     <Printer size={14} /> طباعة الفاتورة
                   </button>
-                  <a
-                    href={getWhatsAppLink(settingsData?.data?.store_whatsapp || '218945270764', order.order_number)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-outline text-sm"
-                  >
-                    <MessageCircle size={14} /> WhatsApp
-                  </a>
                 </div>
+                <CustomerWhatsAppActions order={order} storeName={settingsData?.data?.store_name} />
               </div>
             </div>
 
