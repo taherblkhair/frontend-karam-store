@@ -14,6 +14,7 @@ import CartPage from '@modules/store/pages/CartPage';
 import CheckoutPage from '@modules/store/pages/CheckoutPage';
 import NotFoundPage from '@modules/store/pages/NotFoundPage';
 import PublicCatchAll from '@modules/store/pages/PublicCatchAll';
+import CampaignPage from '@modules/store/pages/CampaignPage';
 
 const CHUNK_RELOAD_KEY = 'karam-chunk-reload';
 
@@ -54,6 +55,8 @@ const StocktakingPage = lazyPage(() => import('@modules/inventory/pages/Stocktak
 const PurchasesPage = lazyPage(() => import('@modules/purchases/pages/PurchasesPage'));
 const SuppliersPage = lazyPage(() => import('@modules/suppliers/pages/SuppliersPage'));
 const BannersPage = lazyPage(() => import('@modules/banners/pages/BannersPage'));
+const CampaignsPage = lazyPage(() => import('@modules/campaigns/pages/CampaignsPage'));
+const CampaignDetailPage = lazyPage(() => import('@modules/campaigns/pages/CampaignDetailPage'));
 const OrdersPage = lazyPage(() => import('@modules/orders/pages/OrdersPage'));
 const CustomersPage = lazyPage(() => import('@modules/customers/pages/CustomersPage'));
 const ReportsPage = lazyPage(() => import('@modules/reports/pages/ReportsPage'));
@@ -95,6 +98,7 @@ export function AppRouter() {
             <Route path="/products/:slug" element={<LegacyProductRedirect />} />
             <Route path="/brands" element={<BrandsPage />} />
             <Route path="/brand/:slug" element={<BrandPage />} />
+            <Route path="/campaigns/:slug" element={<CampaignPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route element={<GuestRoute />}>
@@ -123,6 +127,8 @@ export function AppRouter() {
               <Route path="purchases" element={<PurchasesPage />} />
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="banners" element={<BannersPage />} />
+              <Route path="campaigns" element={<CampaignsPage />} />
+              <Route path="campaigns/:id" element={<CampaignDetailPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="users" element={<UsersPage />} />

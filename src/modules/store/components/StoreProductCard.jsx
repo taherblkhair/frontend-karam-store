@@ -173,8 +173,13 @@ export function StoreProductCard({
     product.compare_price &&
     parseFloat(product.compare_price) > parseFloat(product.price);
 
+  // Active discount campaign (priced server-side): show its % and name on the card
+  const campaign = product.campaign || null;
+  const campaignPercent = campaign ? Math.round(Number(product.discount_percent) || 0) : 0;
+
   const label =
     badge ||
+    (campaignPercent > 0 ? `خصم ${campaignPercent}%` : null) ||
     (showNewBadge || product.is_new ? 'جديد' : null) ||
     (hasDiscount ? 'عرض' : null);
 
@@ -320,9 +325,16 @@ export function StoreProductCard({
               {activeUnavailable && active?.color_name ? `${active.color_name} غير متوفر` : 'غير متوفر'}
             </span>
           ) : label ? (
-            <span className="rounded-md bg-secondary-400 px-2 py-0.5 text-[11px] font-bold text-primary-900 shadow-sm">
-              {label}
-            </span>
+            <>
+              <span className="rounded-md bg-secondary-400 px-2 py-0.5 text-[11px] font-bold text-primary-900 shadow-sm">
+                {label}
+              </span>
+              {campaign ? (
+                <span className="max-w-[9rem] truncate rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {campaign.name_ar}
+                </span>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>

@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { buildLineItem } from '@modules/store/utils/lineItem.js';
+import { storeCampaignsApi } from '@modules/campaigns/api/campaigns.api';
 import { readJSON } from '@core/utils/storageGuard';
 
 const CartContext = createContext(null);
@@ -9,6 +10,50 @@ export const CartProvider = ({ children }) => {
     const saved = readJSON('cart', []);
     return Array.isArray(saved) ? saved : [];
   });
+
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  /**
+   * Re-read authoritative prices (campaign start/end, price changes) for lines saved in
+   * localStorage. Display only — the order total is always recomputed by the API.
+   */
+  const refreshPrices = useCallback(async () => {
+    const current = itemsRef.current;
+    if (!current.length) return;
+    try {
+      const res = await storeCampaignsApi.cartPrices(
+        current.map((i) => ({ product_id: Number(i.product_id), variant_id: i.variant_id ?? null }))
+      );
+      const quotes = Array.isArray(res?.data) ? res.data : [];
+      const keyOf = (pid, vid) => `${Number(pid)}-${vid ? Number(vid) : 0}`;
+      const byKey = new Map(quotes.map((q) => [keyOf(q.product_id, q.variant_id), q]));
+      setItems((prev) =>
+        prev.map((item) => {
+          const q = byKey.get(keyOf(item.product_id, item.variant_id));
+          if (!q?.available) return item;
+          const campaign = q.campaign || null;
+          if (
+            q.price === item.price &&
+            q.compare_price === item.compare_price &&
+            (campaign?.id ?? null) === (item.campaign?.id ?? null)
+          ) {
+            return item;
+          }
+          return { ...item, price: q.price, compare_price: q.compare_price, campaign };
+        })
+      );
+    } catch {
+      // Network issue — keep the saved prices; checkout recomputes server-side anyway.
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPrices();
+    const onFocus = () => refreshPrices();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshPrices]);
 
   useEffect(() => {
     try {
@@ -74,7 +119,9 @@ export const CartProvider = ({ children }) => {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, updateQuantity, removeItem, clearCart, subtotal, itemCount }}>
+    <CartContext.Provider
+      value={{ items, addItem, updateQuantity, removeItem, clearCart, subtotal, itemCount, refreshPrices }}
+    >
       {children}
     </CartContext.Provider>
   );

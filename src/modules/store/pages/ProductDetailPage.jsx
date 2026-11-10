@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Minus, Plus, Link2, Check, Zap } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Link2, Check, Zap, Flame } from 'lucide-react';
+import { CampaignCountdown } from '@modules/campaigns/components/CampaignCountdown';
+import { campaignPath } from '@modules/campaigns/utils/campaign';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
@@ -443,6 +445,27 @@ export default function ProductDetailPage() {
                   </>
                 )}
               </div>
+
+              {product.campaign ? (
+                <Link
+                  to={campaignPath(product.campaign)}
+                  className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-ink-800 px-3 py-2 text-xs sm:text-sm text-white hover:bg-ink-900 transition dark:bg-black"
+                >
+                  <span className="inline-flex items-center gap-1.5 font-bold">
+                    <Flame size={16} className="text-secondary-400" aria-hidden />
+                    ضمن حملة {product.campaign.name_ar}
+                    {product.discount_percent ? (
+                      <span className="text-secondary-400 tabular-nums">· خصم {Math.round(product.discount_percent)}%</span>
+                    ) : null}
+                  </span>
+                  {product.campaign.ends_at ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="opacity-80">ينتهي خلال</span>
+                      <CampaignCountdown endsAt={product.campaign.ends_at} />
+                    </span>
+                  ) : null}
+                </Link>
+              ) : null}
 
               <p
                 className={`mt-3 inline-flex items-center gap-2 text-sm font-semibold ${

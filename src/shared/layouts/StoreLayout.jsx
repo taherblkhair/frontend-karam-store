@@ -6,6 +6,7 @@ import { useTheme } from '@core/config/ThemeContext';
 import { useAuth } from '@core/auth/AuthContext';
 import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { SocialMediaLinks } from '@modules/store/components/SocialMediaLinks';
+import { CampaignAnnouncementBar } from '@modules/campaigns/components/CampaignAnnouncementBar';
 
 const mobileNavClass = ({ isActive }) =>
   `flex flex-col items-center justify-center gap-0.5 flex-1 h-full min-w-0 transition ${
@@ -49,6 +50,7 @@ export default function StoreLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-ink-100 dark:bg-gray-900/95 dark:border-gray-700">
+        <CampaignAnnouncementBar />
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
             <Link to="/" className="text-xl md:text-2xl font-display font-bold text-primary-600">

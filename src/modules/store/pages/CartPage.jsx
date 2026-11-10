@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -192,8 +193,13 @@ function CartItem({ item, onQuantity, onRemove }) {
 }
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, clearCart, subtotal, itemCount } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, subtotal, itemCount, refreshPrices } = useCart();
   const confirm = useConfirm();
+
+  // Campaign prices may have started / ended since items were added
+  useEffect(() => {
+    refreshPrices?.();
+  }, [refreshPrices]);
 
   const savings = items.reduce(
     (sum, i) => sum + (i.compare_price > i.price ? (i.compare_price - i.price) * i.quantity : 0),

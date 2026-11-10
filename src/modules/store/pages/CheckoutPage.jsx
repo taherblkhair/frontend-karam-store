@@ -130,8 +130,12 @@ function formatOrderSummaryText(order) {
 }
 
 export default function CheckoutPage() {
-  const { items: cartItems, clearCart } = useCart();
+  const { items: cartItems, clearCart, refreshPrices } = useCart();
   const { user, register, refreshProfile } = useAuth();
+
+  useEffect(() => {
+    refreshPrices?.();
+  }, [refreshPrices]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
