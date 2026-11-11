@@ -59,6 +59,7 @@ const BannersPage = lazyPage(() => import('@modules/banners/pages/BannersPage'))
 const CampaignsPage = lazyPage(() => import('@modules/campaigns/pages/CampaignsPage'));
 const CampaignDetailPage = lazyPage(() => import('@modules/campaigns/pages/CampaignDetailPage'));
 const OrdersPage = lazyPage(() => import('@modules/orders/pages/OrdersPage'));
+const OrderDetailPage = lazyPage(() => import('@modules/orders/pages/OrderDetailPage'));
 const CustomersPage = lazyPage(() => import('@modules/customers/pages/CustomersPage'));
 const ReportsPage = lazyPage(() => import('@modules/reports/pages/ReportsPage'));
 const ProfitReportPage = lazyPage(() => import('@modules/reports/pages/ProfitReportPage'));
@@ -132,6 +133,7 @@ export function AppRouter() {
               <Route path="campaigns" element={<CampaignsPage />} />
               <Route path="campaigns/:id" element={<CampaignDetailPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="orders/:id" element={<OrderDetailPage />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="reports" element={<ReportsPage />} />

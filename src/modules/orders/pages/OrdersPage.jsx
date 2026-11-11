@@ -1,163 +1,32 @@
 import { useState } from 'react';
-import { Eye, Trash2, Printer, Truck, MessageCircle, Save, RefreshCw, PackageCheck } from 'lucide-react';
-import { SabilShipmentCard } from '@modules/orders/components/SabilShipmentCard';
-import { PartialDeliveryModal } from '@modules/orders/components/PartialDeliveryModal';
-import { OrderItemEventsLog } from '@modules/orders/components/OrderItemEventsLog';
-import {
-  ItemStatusBadge,
-  itemRemaining,
-  itemOrderedQuantity,
-} from '@modules/orders/components/OrderItemStatus';
+import { Link } from 'react-router-dom';
+import { Eye, RefreshCw } from 'lucide-react';
 import { useListParams } from '@shared/hooks/useListParams';
 import { useConfirm } from '@shared/hooks/useConfirm';
-import { useOrders, useOrder, useOrderMutations, useStoreSettings } from '@modules/orders/hooks/useOrders';
-import { LoadingSpinner, OrderStatusBadge, Modal } from '@shared/ui';
+import { useOrders, useOrderMutations } from '@modules/orders/hooks/useOrders';
+import { LoadingSpinner, OrderStatusBadge } from '@shared/ui';
 import { SearchInput, Pagination } from '@shared/components/ListControls';
 import { formatPrice, ORDER_STATUS } from '@core/constants';
-import {
-  WHATSAPP_TEMPLATES,
-  customerWhatsAppLink,
-  defaultTemplateKey,
-} from '@modules/orders/utils/whatsappMessage';
-import { printOrderInvoice } from '@shared/services/invoice.service';
 import { useAuth } from '@core/auth/AuthContext';
 import { TableScroll } from '@shared/components/TableScroll';
-import { resolveMediaUrl } from '@core/api/config.js';
 
-const STATUS_OPTIONS = {
-  admin: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
-  // Sales: pipeline + cancel/return for undelivered / refused orders
-  sales: ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
-};
-
-/** Primary sales actions shown as clear buttons (not just status chips) */
-const SALES_ACTIONS = [
-  {
-    status: 'confirmed',
-    label: 'تأكيد الطلب',
-    when: (s) => ['new', 'pending_confirmation'].includes(s),
-    className: 'btn-primary text-sm',
-  },
-  {
-    status: 'processing',
-    label: 'قيد التجهيز',
-    when: (s) => ['confirmed'].includes(s),
-    className: 'btn-secondary text-sm',
-  },
-  {
-    status: 'shipped',
-    label: 'تم الشحن',
-    when: (s) => ['confirmed', 'processing'].includes(s),
-    className: 'btn-secondary text-sm',
-  },
-  {
-    status: 'delivered',
-    label: 'تم التسليم',
-    when: (s) => ['shipped'].includes(s),
-    className: 'btn-primary text-sm',
-  },
-  {
-    status: 'cancelled',
-    label: 'إلغاء الطلب (قبل الاستلام)',
-    when: (s) => !['cancelled', 'returned', 'delivered'].includes(s),
-    className: 'btn-outline text-sm text-red-600 border-red-300',
-    confirm: 'إلغاء الطلب سيعيد الكمية للمخزون. هل أنت متأكد؟',
-  },
-  {
-    status: 'returned',
-    label: 'مرتجع / لم يستلم',
-    when: (s) => ['shipped', 'delivered', 'confirmed', 'processing'].includes(s),
-    className: 'btn-outline text-sm text-orange-600 border-orange-300',
-    confirm: 'تسجيل مرتجع سيعيد الكمية للمخزون. هل أنت متأكد؟',
-  },
-];
-
-/**
- * One-click WhatsApp to the customer with a ready message (order, items, total, tracking link).
- * The template matching the status is highlighted; staff can edit the text in WhatsApp.
- */
-function CustomerWhatsAppActions({ order, storeName }) {
-  const suggested = defaultTemplateKey(order.status);
-  const closed = ['delivered', 'cancelled', 'returned'].includes(order.status);
-  const hasPhone = Boolean(customerWhatsAppLink(order, suggested, storeName));
-
-  if (!hasPhone) {
-    return <p className="text-xs text-red-600">رقم هاتف العميل غير صالح لواتساب — صحّحه في معلومات العميل.</p>;
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-ink-500 dark:text-gray-400">مراسلة العميل عبر واتساب</p>
-      <div className="flex flex-wrap gap-2">
-        {WHATSAPP_TEMPLATES.map((t) => (
-          <a
-            key={t.key}
-            href={customerWhatsAppLink(order, t.key, storeName || 'متجر كرم')}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${!closed && t.key === suggested ? 'btn-primary' : 'btn-outline'} text-sm`}
-            title={`فتح محادثة العميل برسالة «${t.label}» جاهزة`}
-          >
-            <MessageCircle size={14} /> {t.label}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
+/** Status filter options (details and actions live on /admin/orders/:id) */
+const STATUS_OPTIONS = ['new', 'pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'];
 
 export default function OrdersPage() {
   const confirm = useConfirm();
   const { isAdmin, hasPermission } = useAuth();
   const [statusFilter, setStatusFilter] = useState('');
   const { search, setSearch, page, setPage, withExtra } = useListParams();
-  const [selectedId, setSelectedId] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [shippingLabel, setShippingLabel] = useState('');
-  const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
 
   const listParams = withExtra({ status: statusFilter || undefined });
-
   const { data, isLoading } = useOrders(listParams);
-  const { data: orderDetail, isLoading: detailLoading } = useOrder(selectedId);
+  const { refreshPendingSabil: refreshPendingSabilMutation } = useOrderMutations(null);
 
-  const { data: settingsData } = useStoreSettings();
-
-  const {
-    updateStatus: statusMutation,
-    updateItemsFulfillment: fulfillmentMutation,
-    updateOrder: updateMutation,
-    updateShippingLabel: shippingMutation,
-    generateShippingLabel: generateLabelMutation,
-    syncSabil: syncSabilMutation,
-    refreshSabil: refreshSabilMutation,
-    refreshPendingSabil: refreshPendingSabilMutation,
-    removeOrder: deleteMutation,
-  } = useOrderMutations(selectedId, {
-    onLabelSuccess: (res) => setShippingLabel(res.data.shipping_label || res.data.sabil_reference || ''),
-  });
-
-  const openDetail = (id) => {
-    setSelectedId(id);
-    setEditForm({});
-    setShippingLabel('');
-  };
-
-  const order = orderDetail?.data;
   const orders = data?.data || [];
-  const allowedStatuses = isAdmin ? STATUS_OPTIONS.admin : STATUS_OPTIONS.sales;
+  const allowedStatuses = STATUS_OPTIONS;
   const canManage = isAdmin || hasPermission('orders.manage');
   const canShip = hasPermission('shipping.create') || canManage;
-  const canFulfill = canManage || hasPermission('orders.confirm');
-  const fulfillment = order?.fulfillment;
-  const hasItemChanges =
-    !!fulfillment &&
-    (fulfillment.cancelled_qty > 0 ||
-      fulfillment.returned_qty > 0 ||
-      (fulfillment.delivered_qty > 0 && fulfillment.remaining_qty > 0));
-  const hasOpenItems = (order?.items || []).some((item) => itemRemaining(item) > 0);
-  const showFulfillmentAction =
-    canFulfill && order && !['cancelled', 'returned'].includes(order.status) && hasOpenItems;
 
   return (
     <div className="min-w-0">
@@ -218,7 +87,9 @@ export default function OrdersPage() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="p-4 font-medium">{o.order_number}</td>
+                  <td className="p-4 font-medium">
+                    <Link to={`/admin/orders/${o.id}`} className="hover:text-primary-600">{o.order_number}</Link>
+                  </td>
                   <td className="p-4">{o.customer_name}</td>
                   <td className="p-4">{o.customer_phone}</td>
                   <td className="p-4">{formatPrice(o.total)}</td>
@@ -226,7 +97,7 @@ export default function OrdersPage() {
                   <td className="p-4"><OrderStatusBadge status={o.status} /></td>
                   <td className="p-4">{new Date(o.created_at).toLocaleDateString('ar')}</td>
                   <td className="p-4">
-                    <button onClick={() => openDetail(o.id)} className="btn-outline text-xs py-1"><Eye size={14} /> عرض</button>
+                    <Link to={`/admin/orders/${o.id}`} className="btn-outline text-xs py-1"><Eye size={14} /> عرض</Link>
                   </td>
                 </tr>
               ))}
@@ -236,315 +107,6 @@ export default function OrdersPage() {
       )}
 
       <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} />
-
-      <Modal open={!!selectedId} onClose={() => setSelectedId(null)} title={order ? `طلب ${order.order_number}` : 'تفاصيل الطلب'} size="xl">
-        {detailLoading ? <LoadingSpinner /> : order && (
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h3 className="font-bold">معلومات العميل</h3>
-                {canManage ? (
-                  <>
-                    <input className="input" value={editForm.customer_name ?? order.customer_name} onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })} placeholder="الاسم" />
-                    <input className="input" value={editForm.customer_phone ?? order.customer_phone} onChange={(e) => setEditForm({ ...editForm, customer_phone: e.target.value })} placeholder="الهاتف" />
-                    <textarea className="input" rows={2} value={editForm.address ?? order.address ?? ''} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} placeholder="العنوان" />
-                    <textarea className="input" rows={2} value={editForm.notes ?? order.notes ?? ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} placeholder="ملاحظات" />
-                    <button
-                      onClick={() => updateMutation.mutate({
-                        customer_name: editForm.customer_name ?? order.customer_name,
-                        customer_phone: editForm.customer_phone ?? order.customer_phone,
-                        address: editForm.address ?? order.address,
-                        notes: editForm.notes ?? order.notes,
-                      })}
-                      className="btn-secondary text-sm"
-                    >
-                      <Save size={14} /> حفظ التعديلات
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-sm space-y-1">
-                    <div>{order.customer_name}</div>
-                    <div>{order.customer_phone}</div>
-                    <div>{order.city_name} {order.area_name && `- ${order.area_name}`}</div>
-                    <div>{order.address}</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-bold">ملخص الطلب</h3>
-                <div className="text-sm space-y-1 card p-4">
-                  <div className="flex justify-between"><span>المجموع</span><span>{formatPrice(order.subtotal)}</span></div>
-                  <div className="flex justify-between"><span>الخصم</span><span>{formatPrice(order.discount)}</span></div>
-                  <div className="flex justify-between"><span>الشحن</span><span>{formatPrice(order.shipping_cost)}</span></div>
-                  <div className="flex justify-between font-bold text-lg border-t pt-2"><span>الإجمالي</span><span className="text-primary-600">{formatPrice(order.total)}</span></div>
-                  {hasItemChanges && (
-                    <div className="border-t pt-2 mt-1 space-y-1 text-xs text-ink-500 dark:text-gray-400">
-                      <div className="flex justify-between">
-                        <span>قيمة المسلَّم ({fulfillment.delivered_qty})</span>
-                        <span className="text-emerald-700 dark:text-emerald-300">{formatPrice(fulfillment.delivered_amount)}</span>
-                      </div>
-                      {fulfillment.remaining_qty > 0 && (
-                        <div className="flex justify-between">
-                          <span>قيمة المتبقي ({fulfillment.remaining_qty})</span>
-                          <span>{formatPrice(fulfillment.remaining_amount)}</span>
-                        </div>
-                      )}
-                      {fulfillment.cancelled_qty > 0 && (
-                        <div className="flex justify-between">
-                          <span>ملغي ومُعاد للمخزون ({fulfillment.cancelled_qty})</span>
-                          <span className="text-red-600 line-through">{formatPrice(fulfillment.cancelled_amount)}</span>
-                        </div>
-                      )}
-                      {fulfillment.returned_qty > 0 && (
-                        <div className="flex justify-between">
-                          <span>مرتجع ومُعاد للمخزون ({fulfillment.returned_qty})</span>
-                          <span className="text-orange-600 line-through">{formatPrice(fulfillment.returned_amount)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => printOrderInvoice(order, settingsData?.data?.store_name)} className="btn-outline text-sm">
-                    <Printer size={14} /> طباعة الفاتورة
-                  </button>
-                </div>
-                <CustomerWhatsAppActions order={order} storeName={settingsData?.data?.store_name} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <h3 className="font-bold">المنتجات والنسخ المحددة</h3>
-                {showFulfillmentAction && (
-                  <button
-                    type="button"
-                    className="btn-secondary text-sm"
-                    onClick={() => setFulfillmentOpen(true)}
-                  >
-                    <PackageCheck size={15} /> تسليم جزئي / إلغاء منتجات
-                  </button>
-                )}
-              </div>
-              <div className="space-y-3">
-                {order.items?.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`card p-3 sm:p-4 flex gap-3 sm:gap-4 border border-ink-100 dark:border-gray-700 ${Number(item.quantity) <= 0 ? 'opacity-60' : ''}`}
-                  >
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-tertiary-100 dark:bg-gray-700 shrink-0 ring-1 ring-ink-100 dark:ring-gray-600">
-                      {item.image ? (
-                        <img
-                          src={resolveMediaUrl(item.image)}
-                          alt={item.product_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-ink-300">
-                          بلا صورة
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-ink-800 dark:text-gray-100">{item.product_name}</span>
-                        {item.item_status && <ItemStatusBadge status={item.item_status} />}
-                      </div>
-                      {(item.variant_info || item.color_name || item.size_name || item.variant_id) && (
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {item.color_name && (
-                            <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
-                              اللون: {item.color_name}
-                            </span>
-                          )}
-                          {item.size_name && (
-                            <span className="inline-flex items-center rounded-full bg-secondary-50 text-ink-800 dark:bg-secondary-900/20 px-2.5 py-0.5 text-xs font-semibold">
-                              المقاس: {item.size_name}
-                            </span>
-                          )}
-                          {!item.color_name && !item.size_name && item.variant_info && (
-                            <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
-                              {item.variant_info}
-                            </span>
-                          )}
-                          {item.variant_id && (
-                            <span className="inline-flex items-center rounded-full bg-ink-50 text-ink-500 dark:bg-ink-800 px-2.5 py-0.5 text-[11px]">
-                              معرّف النسخة #{item.variant_id}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-500 dark:text-gray-400">
-                        <span>
-                          SKU:{' '}
-                          <strong className="text-ink-700 dark:text-gray-200 font-mono text-xs">
-                            {item.sku || '—'}
-                          </strong>
-                        </span>
-                        <span>
-                          الكمية: <strong className="text-ink-800 dark:text-gray-100">{item.quantity}</strong>
-                          {itemOrderedQuantity(item) !== Number(item.quantity) && (
-                            <span className="text-xs"> (من أصل {itemOrderedQuantity(item)})</span>
-                          )}
-                        </span>
-                        <span>
-                          سعر الوحدة:{' '}
-                          <strong className="text-ink-800 dark:text-gray-100">
-                            {formatPrice(item.unit_price)}
-                          </strong>
-                        </span>
-                      </div>
-                      {(Number(item.delivered_quantity) > 0 ||
-                        Number(item.cancelled_quantity) > 0 ||
-                        Number(item.returned_quantity) > 0) && (
-                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                          {Number(item.delivered_quantity) > 0 && (
-                            <span className="text-emerald-700 dark:text-emerald-300">مُسلَّم: {item.delivered_quantity}</span>
-                          )}
-                          {itemRemaining(item) > 0 && (
-                            <span className="text-amber-700 dark:text-amber-300">متبقٍ: {itemRemaining(item)}</span>
-                          )}
-                          {Number(item.cancelled_quantity) > 0 && (
-                            <span className="text-red-600 dark:text-red-300">ملغي: {item.cancelled_quantity}</span>
-                          )}
-                          {Number(item.returned_quantity) > 0 && (
-                            <span className="text-orange-600 dark:text-orange-300">مرتجع: {item.returned_quantity}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-left shrink-0 font-bold text-primary-600 tabular-nums">
-                      {formatPrice(item.total)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <OrderItemEventsLog events={order.item_events} />
-
-            {canShip && (
-              <div className="card p-4 space-y-3">
-                <h3 className="font-bold flex items-center gap-2"><Truck size={18} /> بوليصة الشحن / درب السبيل</h3>
-
-                {order.source === 'online' && (
-                  <SabilShipmentCard
-                    order={order}
-                    syncMutation={syncSabilMutation}
-                    refreshMutation={refreshSabilMutation}
-                  />
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    className="input flex-1 min-w-[200px]"
-                    placeholder="رقم البوليصة"
-                    value={shippingLabel || order.shipping_label || ''}
-                    onChange={(e) => setShippingLabel(e.target.value)}
-                  />
-                  <button onClick={() => shippingMutation.mutate(shippingLabel || order.shipping_label)} className="btn-secondary text-sm">حفظ</button>
-                  <button onClick={() => generateLabelMutation.mutate()} disabled={generateLabelMutation.isPending} className="btn-primary text-sm">
-                    {order.source === 'online' ? 'إنشاء البوليصة' : 'إنشاء بوليصة'}
-                  </button>
-                </div>
-                {order.shipping_label && <p className="text-sm text-green-600">البوليصة الحالية: {order.shipping_label}</p>}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-bold mb-2">إجراءات المبيعات</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  الإلغاء / المرتجع يعيد الكمية تلقائياً إلى المخزون القابل للبيع
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {SALES_ACTIONS.filter((a) => a.when(order.status) && allowedStatuses.includes(a.status)).map((action) => (
-                    <button
-                      key={action.status}
-                      type="button"
-                      disabled={statusMutation.isPending}
-                      className={action.className}
-                      onClick={async () => {
-                        if (action.confirm) {
-                          const ok = await confirm({
-                            title: action.label,
-                            message: action.confirm,
-                            confirmText: 'متابعة',
-                            variant: ['cancelled', 'returned'].includes(action.status) ? 'danger' : 'warning',
-                          });
-                          if (!ok) return;
-                        }
-                        statusMutation.mutate({ id: order.id, status: action.status });
-                      }}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {isAdmin && (
-                <div>
-                  <h3 className="font-bold mb-3 text-sm text-gray-500">كل الحالات (إدارة)</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {allowedStatuses.map((s) => (
-                      <button
-                        key={s}
-                        onClick={async () => {
-                          if (['cancelled', 'returned'].includes(s) && order.status !== s) {
-                            const ok = await confirm({
-                              title: ORDER_STATUS[s]?.label || s,
-                              message: 'تغيير الحالة إلى إلغاء/مرتجع سيعيد الكمية للمخزون. هل أنت متأكد؟',
-                              confirmText: 'تأكيد',
-                              variant: 'danger',
-                            });
-                            if (!ok) return;
-                          }
-                          statusMutation.mutate({ id: order.id, status: s });
-                        }}
-                        disabled={order.status === s}
-                        className={`btn-outline text-xs ${order.status === s ? 'border-primary-600 bg-primary-50' : ''}`}
-                      >
-                        {ORDER_STATUS[s]?.label || s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {canManage && ['new', 'cancelled'].includes(order.status) && (
-              <button
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'حذف الطلب',
-                    message: `هل أنت متأكد من حذف الطلب ${order.order_number}؟ لا يمكن التراجع.`,
-                    confirmText: 'حذف',
-                    variant: 'danger',
-                  });
-                  if (ok) {
-                    deleteMutation.mutate(order.id, { onSuccess: () => setSelectedId(null) });
-                  }
-                }}
-                className="btn-danger text-sm"
-              >
-                <Trash2 size={14} /> حذف الطلب
-              </button>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {order && (
-        <PartialDeliveryModal
-          key={order.id}
-          open={fulfillmentOpen && !!selectedId}
-          onClose={() => setFulfillmentOpen(false)}
-          order={order}
-          mutation={fulfillmentMutation}
-        />
-      )}
     </div>
   );
 }

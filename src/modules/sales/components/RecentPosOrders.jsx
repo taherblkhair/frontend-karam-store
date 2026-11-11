@@ -107,7 +107,7 @@ export function RecentPosOrders({ open, onClose }) {
                     </div>
                     <div className="mt-2">
                       <Link
-                        to="/admin/orders"
+                        to={`/admin/orders/${order.id}`}
                         className="text-xs text-primary-600 hover:underline"
                         onClick={onClose}
                       >

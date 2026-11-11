@@ -44,7 +44,7 @@ export function useOrderMutations(
   };
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => ordersApi.updateStatus(id, status),
+    mutationFn: ({ id, status, reason, note }) => ordersApi.updateStatus(id, status, { reason, note }),
     onSuccess: (res) => {
       invalidate();
       notifySuccess(res);
@@ -124,6 +124,24 @@ export function useOrderMutations(
     onError: notifyError,
   });
 
+  const addNote = useMutation({
+    mutationFn: (body) => ordersApi.addNote(selectedId, body),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(res);
+    },
+    onError: notifyError,
+  });
+
+  const deleteNote = useMutation({
+    mutationFn: (noteId) => ordersApi.deleteNote(selectedId, noteId),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(res);
+    },
+    onError: notifyError,
+  });
+
   const removeOrder = useMutation({
     mutationFn: ordersApi.remove,
     onSuccess: (res) => {
@@ -143,5 +161,7 @@ export function useOrderMutations(
     refreshSabil,
     refreshPendingSabil,
     removeOrder,
+    addNote,
+    deleteNote,
   };
 }

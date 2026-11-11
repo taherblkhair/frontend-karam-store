@@ -5,7 +5,10 @@ export const ordersApi = {
   list: (params) => api.get(endpoints.orders, { params }),
   getById: (id) => api.get(`${endpoints.orders}/${id}`),
   update: (id, data) => api.put(`${endpoints.orders}/${id}`, data),
-  updateStatus: (id, status) => api.patch(`${endpoints.orders}/${id}/status`, { status }),
+  updateStatus: (id, status, details = {}) =>
+    api.patch(`${endpoints.orders}/${id}/status`, { status, ...details }),
+  addNote: (id, body) => api.post(`${endpoints.orders}/${id}/notes`, { body }),
+  deleteNote: (id, noteId) => api.delete(`${endpoints.orders}/${id}/notes/${noteId}`),
   updateItemsFulfillment: (id, data) =>
     api.post(`${endpoints.orders}/${id}/items/fulfillment`, data),
   updateShippingLabel: (id, shipping_label) =>

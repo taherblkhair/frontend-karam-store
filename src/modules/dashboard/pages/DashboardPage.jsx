@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ShoppingBag, Package, AlertTriangle, TrendingUp, Wallet } from 'lucide-react';
 import { dashboardApi } from '@modules/dashboard/api/dashboard.api';
@@ -100,7 +101,7 @@ export default function DashboardPage() {
               <tbody>
                 {stats?.recentOrders?.map((o) => (
                   <tr key={o.id} className="border-b dark:border-gray-700">
-                    <td className="py-3">{o.order_number}</td>
+                    <td className="py-3"><Link to={`/admin/orders/${o.id}`} className="hover:text-primary-600">{o.order_number}</Link></td>
                     <td className="py-3">{o.customer_name}</td>
                     <td className="py-3">{formatPrice(o.total)}</td>
                     <td className="py-3"><OrderStatusBadge status={o.status} /></td>
