@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Minus, Plus, Link2, Check, Zap, Flame } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Link2, Check, Zap, Flame, MessageCircle } from 'lucide-react';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
+import { toWhatsAppNumber } from '@shared/utils/phone';
 import { CampaignCountdown } from '@modules/campaigns/components/CampaignCountdown';
 import { campaignPath } from '@modules/campaigns/utils/campaign';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
@@ -17,6 +19,7 @@ import { flyToCart } from '@modules/store/utils/flyToCart';
 import {
   decodeProductSlug,
   productAbsoluteUrl,
+  productInquiryWhatsAppUrl,
   productPath,
 } from '@modules/store/utils/productPaths';
 
@@ -118,6 +121,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [linkCopied, setLinkCopied] = useState(false);
   const galleryRef = useRef(null);
+  // Colour / size block: the sticky mobile bar scrolls back here when no option is chosen
+  const optionsRef = useRef(null);
+  const [highlightOptions, setHighlightOptions] = useState(false);
+
+  const { data: settingsData } = useQuery({ ...storeSettingsQuery, staleTime: 60_000 });
+  const storeWhatsApp = toWhatsAppNumber(settingsData?.data?.store_whatsapp);
 
   const { data, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -234,6 +243,10 @@ export default function ProductDetailPage() {
     if (hasVariants && !selectedVariant) {
       const parts = [uniqueColors.length && 'اللون', uniqueSizes.length && 'المقاس'].filter(Boolean);
       notifyError({ message: `يرجى اختيار ${parts.join(' و') || 'الخيار'}` });
+      // From the sticky bar the options may be off-screen: bring them into view
+      optionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightOptions(true);
+      setTimeout(() => setHighlightOptions(false), 1800);
       return false;
     }
     if (outOfStock) {
@@ -480,6 +493,12 @@ export default function ProductDetailPage() {
               </p>
             </div>
 
+            <div
+              ref={optionsRef}
+              className={`scroll-mt-24 rounded-xl transition-shadow duration-300 ${
+                highlightOptions ? 'ring-2 ring-secondary-400 ring-offset-4 ring-offset-white dark:ring-offset-gray-900' : ''
+              }`}
+            >
             {uniqueColors.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-bold mb-2 text-sm sm:text-base">
@@ -547,6 +566,8 @@ export default function ProductDetailPage() {
               </div>
             )}
 
+            </div>
+
             {partialStockHint && !variantSoldOut && (
               <p className="mb-4 inline-flex items-center gap-2 self-start rounded-lg border border-secondary-300/70 bg-secondary-50 px-3 py-2 text-sm font-medium text-ink-700 dark:border-secondary-700/50 dark:bg-secondary-900/20 dark:text-secondary-100">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-secondary-500" aria-hidden />
@@ -568,6 +589,18 @@ export default function ProductDetailPage() {
             <p className="hidden sm:block mt-3 text-xs text-ink-400 leading-relaxed">
               «اطلب الآن» ينقلك مباشرة لإتمام الطلب لهذا المنتج فقط دون التأثير على محتويات السلة.
             </p>
+
+            {storeWhatsApp ? (
+              <a
+                href={productInquiryWhatsAppUrl(storeWhatsApp, product, selectedVariant)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-outline mt-3 w-full min-h-12"
+              >
+                <MessageCircle size={20} className="shrink-0" />
+                استفسر عن المنتج عبر واتساب
+              </a>
+            ) : null}
 
             {product.description && (
               <div className="mt-5 sm:mt-6">

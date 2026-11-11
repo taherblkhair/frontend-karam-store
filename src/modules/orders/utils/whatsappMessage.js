@@ -3,7 +3,7 @@
  * The template follows the order status; staff can still edit the text in WhatsApp before sending.
  */
 import { formatPrice } from '@core/constants';
-import { isValidLibyaMobile, normalizeLibyaPhone } from '@shared/utils/phone';
+import { isValidLibyaMobile, normalizeLibyaPhone, toWhatsAppNumber } from '@shared/utils/phone';
 import { trackOrderAbsoluteUrl } from '@modules/store/utils/trackOrder';
 
 export const WHATSAPP_TEMPLATES = [
@@ -19,8 +19,8 @@ export function defaultTemplateKey(status) {
 
 /** 09XXXXXXXX → 2189XXXXXXXX for wa.me; null when not a valid Libyan mobile. */
 export function whatsappNumber(phone) {
-  const local = normalizeLibyaPhone(phone);
-  return isValidLibyaMobile(local) ? `218${local.slice(1)}` : null;
+  // Customers are always Libyan mobiles
+  return isValidLibyaMobile(normalizeLibyaPhone(phone)) ? toWhatsAppNumber(phone) : null;
 }
 
 function itemLines(order) {

@@ -1,3 +1,4 @@
+import { toWhatsAppNumber } from '@shared/utils/phone';
 export const ORDER_STATUS = {
   new: { label: 'جديد', color: 'bg-blue-100 text-blue-800' },
   pending_confirmation: { label: 'قيد التأكيد', color: 'bg-yellow-100 text-yellow-800' },
@@ -15,5 +16,7 @@ export const formatPrice = (price) => {
 
 export const getWhatsAppLink = (phone, orderNumber) => {
   const message = encodeURIComponent(`مرحباً، أريد الاستفسار عن الطلب رقم: ${orderNumber}`);
-  return `https://wa.me/${phone}?text=${message}`;
+  // Store number may be saved as 09… — wa.me needs international digits (218…)
+  const number = toWhatsAppNumber(phone) || String(phone || '').replace(/\D/g, '');
+  return `https://wa.me/${number}?text=${message}`;
 };

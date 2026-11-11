@@ -47,3 +47,17 @@ export function decodeProductSlug(param = '') {
     return String(param || '').trim();
   }
 }
+
+/**
+ * «استفسر عن المنتج عبر واتساب» — chat with the store, product name (+ chosen option) and link pre-filled.
+ * @param {string} whatsappNumber international digits (see toWhatsAppNumber)
+ */
+export function productInquiryWhatsAppUrl(whatsappNumber, product, variant = null) {
+  if (!whatsappNumber || !product) return null;
+  const option = [variant?.color_name, variant?.size_name].filter(Boolean).join(' / ');
+  const lines = [
+    `مرحباً، أريد الاستفسار عن ${product.name_ar}${option ? ` (${option})` : ''}.`,
+    `رابط المنتج: ${productAbsoluteUrl(product)}`,
+  ];
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(lines.join('\n'))}`;
+}

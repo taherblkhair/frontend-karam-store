@@ -46,3 +46,15 @@ export function isValidLibyaMobile(input) {
   if (!/^09[1-5]\d{7}$/.test(phone)) return false;
   return LIBYA_MOBILE_PREFIXES.some((prefix) => phone.startsWith(prefix));
 }
+
+/**
+ * Number for wa.me links (international digits, no "+").
+ * Libyan mobiles in any spelling → 2189XXXXXXXX; an already-international number is kept.
+ * Returns null when it cannot be a WhatsApp number.
+ */
+export function toWhatsAppNumber(phone) {
+  const local = normalizeLibyaPhone(phone);
+  if (isValidLibyaMobile(local)) return `218${local.slice(1)}`;
+  const digits = toAsciiDigits(phone).replace(/\D/g, '').replace(/^00/, '');
+  return digits.length >= 11 && !digits.startsWith('0') ? digits : null;
+}
