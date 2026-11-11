@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCircle2, Copy, Share2, Truck, X } from 'lucide-react';
+import { Banknote, CheckCircle2, Landmark, Share2, Truck, X } from 'lucide-react';
 import {
   notifySuccess,
   notifyError,
@@ -28,6 +28,16 @@ import { SearchableSelect } from '@modules/store/components/SearchableSelect';
 import QuickFillPanel from '@modules/store/components/QuickFillPanel';
 import { resolveQuickFill } from '@modules/store/utils/quickFill';
 import { trackOrderPath, trackOrderWhatsAppShareUrl } from '@modules/store/utils/trackOrder';
+import { CopyButton } from '@modules/store/components/CopyButton';
+import { BankTransferModal } from '@modules/store/components/BankTransferModal';
+
+const BANK_FIELDS = ['bank_account_id', 'transfer_amount', 'receipt'];
+
+/** Accounts the customer can pay into — managed in admin settings, never hard-coded. */
+function payableBankAccounts(settings) {
+  if (!settings?.bank_transfer_enabled) return [];
+  return (settings.bank_accounts || []).filter((a) => a.is_active !== false && a.bank_name && a.account_number);
+}
 
 const PHONE_LENGTH = 10;
 const VALIDATION_TOAST_ID = 'checkout-validation';
@@ -78,22 +88,6 @@ function RequiredMark() {
       {' '}*
     </span>
   );
-}
-
-async function copyToClipboard(text) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  const input = document.createElement('textarea');
-  input.value = text;
-  input.setAttribute('readonly', '');
-  input.style.position = 'absolute';
-  input.style.left = '-9999px';
-  document.body.appendChild(input);
-  input.select();
-  document.execCommand('copy');
-  document.body.removeChild(input);
 }
 
 function itemVariantLabel(item) {
@@ -172,6 +166,8 @@ export default function CheckoutPage() {
     password: '',
   });
   const [shippingCost, setShippingCost] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [bankOpen, setBankOpen] = useState(false);
   const [addressPrefillDone, setAddressPrefillDone] = useState(false);
   const [clientError, setClientError] = useState(null);
   const fieldRefs = {
@@ -250,6 +246,7 @@ export default function CheckoutPage() {
       } else {
         clearCart();
       }
+      setBankOpen(false);
       setOrderSuccess({ ...res.data, message: res.message });
       notifySuccess(res);
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -260,8 +257,18 @@ export default function CheckoutPage() {
     onError: (err) => {
       applyApiError(err);
       notifyError(err);
+      // A delivery/cart problem is fixed on the page itself, not in the transfer window
+      const fields = (err?.errors || []).map((e) => e?.field || e?.path);
+      if (!fields.some((f) => BANK_FIELDS.includes(f))) setBankOpen(false);
     },
   });
+
+  const bankAccounts = payableBankAccounts(settingsData?.data);
+  const bankTransferOn = bankAccounts.length > 0;
+  // Bank transfer switched off while the page was open → fall back to cash on delivery
+  useEffect(() => {
+    if (!bankTransferOn && paymentMethod === 'bank_transfer') setPaymentMethod('cod');
+  }, [bankTransferOn, paymentMethod]);
 
   const areas = areasData?.data || [];
   const validationCtx = {
@@ -366,6 +373,16 @@ export default function CheckoutPage() {
     }
     setClientError(null);
 
+    if (paymentMethod === 'bank_transfer') {
+      setBankOpen(true);
+      return;
+    }
+    placeOrder();
+  };
+
+  /** @param {{ bank_account_id: string, transfer_amount: number, receipt: File }} [bank] */
+  const placeOrder = async (bank) => {
+    clearErrors();
     const customerPhone = normalizeLibyaPhone(form.customer_phone);
 
     if (createAccount && !user) {
@@ -382,7 +399,7 @@ export default function CheckoutPage() {
       }
     }
 
-    orderMutation.mutate({
+    const payload = {
       customer_name: form.customer_name,
       customer_phone: customerPhone,
       city_id: parseInt(form.city_id, 10),
@@ -390,7 +407,24 @@ export default function CheckoutPage() {
       address: form.address,
       notes: form.notes,
       items: items.map((i) => toOrderItemPayload(i)),
-    });
+    };
+    if (!bank) {
+      orderMutation.mutate(payload);
+      return;
+    }
+    // Order + receipt in one request: no order without its receipt, no receipt without its order
+    const body = new FormData();
+    body.append(
+      'payload',
+      JSON.stringify({
+        ...payload,
+        payment_method: 'bank_transfer',
+        bank_account_id: bank.bank_account_id,
+        transfer_amount: bank.transfer_amount,
+      })
+    );
+    body.append('receipt', bank.receipt);
+    orderMutation.mutate(body);
   };
 
   if (items.length === 0 && !orderSuccess) {
@@ -665,44 +699,67 @@ export default function CheckoutPage() {
                   <span className="text-primary-600">{formatPrice(total)}</span>
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm">
-                💵 الدفع عند الاستلام (COD)
-              </div>
+              {bankTransferOn ? (
+                <fieldset className="mt-4">
+                  <legend className="block text-sm font-medium mb-2">طريقة الدفع</legend>
+                  <div className="grid gap-2">
+                    {[
+                      { value: 'cod', icon: Banknote, title: 'الدفع عند الاستلام', desc: 'ادفع نقداً للمندوب عند استلام طلبك' },
+                      { value: 'bank_transfer', icon: Landmark, title: 'تحويل مصرفي', desc: 'حوّل المبلغ لحسابنا وأرفق صورة الإيصال' },
+                    ].map((opt) => {
+                      const Icon = opt.icon;
+                      const active = paymentMethod === opt.value;
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer text-sm ${
+                            active ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20' : 'border-ink-100 dark:border-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="payment-method"
+                            value={opt.value}
+                            checked={active}
+                            onChange={() => setPaymentMethod(opt.value)}
+                          />
+                          <Icon size={22} className="text-primary-600 shrink-0" aria-hidden />
+                          <span className="min-w-0">
+                            <span className="block font-semibold">{opt.title}</span>
+                            <span className="block text-xs text-ink-500">{opt.desc}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ) : (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm">
+                  💵 الدفع عند الاستلام (COD)
+                </div>
+              )}
               <button type="submit" disabled={orderMutation.isPending} className="btn-primary w-full mt-6">
-                {orderMutation.isPending ? 'جاري الإرسال...' : 'تأكيد الطلب'}
+                {orderMutation.isPending
+                  ? 'جاري الإرسال...'
+                  : paymentMethod === 'bank_transfer'
+                    ? 'متابعة للتحويل'
+                    : 'تأكيد الطلب'}
               </button>
             </div>
           </div>
         </form>
       </div>
+      <BankTransferModal
+        open={bankOpen}
+        onClose={() => setBankOpen(false)}
+        accounts={bankAccounts}
+        total={total}
+        items={items}
+        submitting={orderMutation.isPending}
+        getFieldError={getFieldError}
+        onSubmit={placeOrder}
+      />
     </StoreLayout>
-  );
-}
-
-function CopyButton({ text, label, copiedLabel = 'تم النسخ', className = '' }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await copyToClipboard(text);
-      setCopied(true);
-      notifySuccess({ message: copiedLabel });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      notifyError({ message: 'تعذر النسخ' });
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className={className}
-      aria-label={copied ? copiedLabel : label}
-    >
-      {copied ? <Check size={16} className="shrink-0" /> : <Copy size={16} className="shrink-0" />}
-      <span>{copied ? copiedLabel : label}</span>
-    </button>
   );
 }
 
@@ -721,7 +778,9 @@ function OrderSuccessView({ order, storeName, whatsapp, onHome }) {
           {order.message || 'تم إنشاء الطلب'}
         </h1>
         <p className="text-sm text-ink-500">
-          سيتم التواصل معك لتأكيد الطلب. الدفع عند الاستلام.
+          {order.payment_method === 'bank_transfer'
+            ? 'استلمنا إيصال التحويل، وسنؤكد طلبك بعد التحقق من وصول المبلغ.'
+            : 'سيتم التواصل معك لتأكيد الطلب. الدفع عند الاستلام.'}
         </p>
       </div>
 
@@ -831,7 +890,9 @@ function OrderSuccessView({ order, storeName, whatsapp, onHome }) {
         </div>
 
         <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm">
-          الدفع عند الاستلام (COD)
+          {order.payment_method === 'bank_transfer'
+            ? `تحويل مصرفي${order.payment_proof?.bank_name ? ` — ${order.payment_proof.bank_name}` : ''} — الإيصال قيد المراجعة`
+            : 'الدفع عند الاستلام (COD)'}
         </div>
       </div>
 

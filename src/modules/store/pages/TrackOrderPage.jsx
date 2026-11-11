@@ -213,7 +213,13 @@ function TrackingResult({ result, storeName, storeWhatsapp }) {
             <span>الإجمالي</span>
             <span className="text-primary-600">{formatPrice(result.total)}</span>
           </div>
-          <p className="text-xs text-ink-500">الدفع عند الاستلام</p>
+          <p className="text-xs text-ink-500">
+            {result.payment_method === 'bank_transfer'
+              ? result.payment_status === 'paid'
+                ? 'تحويل مصرفي — تم تأكيد استلام المبلغ'
+                : 'تحويل مصرفي — الإيصال قيد المراجعة'
+              : 'الدفع عند الاستلام'}
+          </p>
         </div>
       </section>
 

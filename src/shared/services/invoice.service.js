@@ -86,7 +86,11 @@ export function printOrderInvoice(order, storeName = 'متجر كرم') {
     <div><span>الشحن</span><span>${formatPrice(order.shipping_cost)}</span></div>
     <div class="total"><span>الإجمالي</span><span>${formatPrice(order.total)}</span></div>
   </div>
-  <p style="margin-top:24px;">طريقة الدفع: الدفع عند الاستلام (COD)</p>
+  <p style="margin-top:24px;">طريقة الدفع: ${
+    order.payment_method === 'bank_transfer'
+      ? `تحويل مصرفي${order.payment_status === 'paid' ? ' (مدفوع)' : ' (بانتظار تأكيد التحويل)'}`
+      : 'الدفع عند الاستلام (COD)'
+  }</p>
   <script>window.onload = () => { window.print(); }</script>
 </body>
 </html>`;

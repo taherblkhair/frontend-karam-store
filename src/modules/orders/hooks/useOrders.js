@@ -133,6 +133,15 @@ export function useOrderMutations(
     onError: notifyError,
   });
 
+  const reviewPayment = useMutation({
+    mutationFn: (payload) => ordersApi.reviewPayment(selectedId, payload),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(res);
+    },
+    onError: notifyError,
+  });
+
   const deleteNote = useMutation({
     mutationFn: (noteId) => ordersApi.deleteNote(selectedId, noteId),
     onSuccess: (res) => {
@@ -163,5 +172,6 @@ export function useOrderMutations(
     removeOrder,
     addNote,
     deleteNote,
+    reviewPayment,
   };
 }

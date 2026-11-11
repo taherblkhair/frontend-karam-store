@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight,
+  CreditCard,
   History,
   MessageCircle,
   PackageCheck,
@@ -17,6 +18,7 @@ import { OrderItemEventsLog } from '@modules/orders/components/OrderItemEventsLo
 import { OrderStatusActions } from '@modules/orders/components/OrderStatusActions';
 import { OrderStatusTimeline } from '@modules/orders/components/OrderStatusTimeline';
 import { OrderInternalNotes } from '@modules/orders/components/OrderInternalNotes';
+import { OrderPaymentCard } from '@modules/orders/components/OrderPaymentCard';
 import {
   ItemStatusBadge,
   itemRemaining,
@@ -108,6 +110,7 @@ export default function OrderDetailPage() {
     removeOrder: deleteMutation,
     addNote: addNoteMutation,
     deleteNote: deleteNoteMutation,
+    reviewPayment: reviewPaymentMutation,
   } = useOrderMutations(selectedId, {
     onLabelSuccess: (res) => setShippingLabel(res.data.shipping_label || res.data.sabil_reference || ''),
   });
@@ -397,6 +400,11 @@ export default function OrderDetailPage() {
                   )}
                 </div>
             <CustomerWhatsAppActions order={order} storeName={settingsData?.data?.store_name} />
+          </section>
+
+          <section className="card p-4">
+            <h2 className="font-bold mb-3 flex items-center gap-2"><CreditCard size={18} /> الدفع</h2>
+            <OrderPaymentCard order={order} reviewMutation={reviewPaymentMutation} canReview={canFulfill} />
           </section>
 
           <section className="card p-4">

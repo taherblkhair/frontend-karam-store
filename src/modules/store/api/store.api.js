@@ -21,7 +21,14 @@ export const storeApi = {
   settings: () =>
     withEarlyFetch(endpoints.store.settings, () => api.get(endpoints.store.settings)),
   shippingCost: (params) => api.get(endpoints.store.shippingCost, { params }),
-  createOrder: (data) => api.post(endpoints.store.orders, data),
+  /**
+   * JSON for cash on delivery; FormData (order payload + receipt) for bank transfer.
+   * The instance defaults to JSON, and axios turns FormData into JSON unless told otherwise.
+   */
+  createOrder: (data) =>
+    data instanceof FormData
+      ? api.post(endpoints.store.orders, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+      : api.post(endpoints.store.orders, data),
   /** Read-only tracking: { query, phone } or { query, token } */
   trackOrder: (data) => api.post(`${endpoints.store.orders}/track`, data),
 };

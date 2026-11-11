@@ -12,6 +12,9 @@ import {
   MapPin,
   Share2,
   Construction,
+  Landmark,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
@@ -31,7 +34,17 @@ const TABS = [
   { id: 'social', label: 'وسائل التواصل', icon: Share2 },
   { id: 'currency', label: 'العملة', icon: Coins },
   { id: 'shipping', label: 'أسعار التوصيل', icon: Truck },
+  { id: 'bank', label: 'التحويل المصرفي', icon: Landmark },
 ];
+
+const newBankAccount = () => ({
+  id: Math.random().toString(16).slice(2, 14),
+  bank_name: '',
+  account_name: '',
+  account_number: '',
+  iban: '',
+  is_active: true,
+});
 
 const SITE_STATUS_OPTIONS = [
   {
@@ -251,7 +264,7 @@ export default function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">إعدادات الموقع</h1>
         <p className="text-sm text-gray-500 mt-1">
-          إدارة حالة الموقع، الهوية، التواصل، والعملة وأسعار التوصيل.
+          إدارة حالة الموقع، الهوية، التواصل، والعملة وأسعار التوصيل والتحويل المصرفي.
         </p>
       </div>
 
@@ -659,6 +672,119 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Bank transfer */}
+      {tab === 'bank' && (
+        <form onSubmit={saveSettings} className="card p-6 space-y-5">
+          <div>
+            <h2 className="font-bold text-lg">الدفع بالتحويل المصرفي</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              تظهر الحسابات المفعّلة للعميل عند اختيار التحويل المصرفي في صفحة إتمام الطلب، مع إمكانية نسخ الرقم وIBAN.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(form.bank_transfer_enabled)}
+              onChange={(e) => setField('bank_transfer_enabled', e.target.checked)}
+            />{' '}
+            تفعيل الدفع بالتحويل المصرفي في المتجر
+          </label>
+
+          <div className="space-y-4">
+            {(form.bank_accounts || []).map((account, index) => {
+              const updateAccount = (key, value) =>
+                setField(
+                  'bank_accounts',
+                  (form.bank_accounts || []).map((a, i) => (i === index ? { ...a, [key]: value } : a))
+                );
+              return (
+                <div
+                  key={account.id || index}
+                  className={`rounded-xl border p-4 space-y-4 ${
+                    account.is_active === false
+                      ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/30'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold">{account.bank_name || `حساب ${index + 1}`}</p>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 px-2 py-1 rounded-lg"
+                      onClick={() =>
+                        setField('bank_accounts', (form.bank_accounts || []).filter((_, i) => i !== index))
+                      }
+                    >
+                      <Trash2 size={14} /> حذف
+                    </button>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Field label="اسم المصرف">
+                      <input
+                        className="input"
+                        value={account.bank_name || ''}
+                        onChange={(e) => updateAccount('bank_name', e.target.value)}
+                        placeholder="مصرف التجارة والتنمية"
+                      />
+                    </Field>
+                    <Field label="اسم صاحب الحساب">
+                      <input
+                        className="input"
+                        value={account.account_name || ''}
+                        onChange={(e) => updateAccount('account_name', e.target.value)}
+                        placeholder="شركة سديم التقنية"
+                      />
+                    </Field>
+                    <Field label="رقم الحساب">
+                      <input
+                        className="input"
+                        value={account.account_number || ''}
+                        onChange={(e) => updateAccount('account_number', e.target.value)}
+                        placeholder="0017773455001"
+                        dir="ltr"
+                        inputMode="numeric"
+                      />
+                    </Field>
+                    <Field label="IBAN" hint="اختياري — مثال: LY23010017000017773455001">
+                      <input
+                        className="input"
+                        value={account.iban || ''}
+                        onChange={(e) => updateAccount('iban', e.target.value.toUpperCase())}
+                        placeholder="LY23010017000017773455001"
+                        dir="ltr"
+                      />
+                    </Field>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={account.is_active !== false}
+                      onChange={(e) => updateAccount('is_active', e.target.checked)}
+                    />{' '}
+                    يظهر للعملاء
+                  </label>
+                </div>
+              );
+            })}
+
+            {!(form.bank_accounts || []).length ? (
+              <p className="text-sm text-gray-500">لا توجد حسابات مصرفية بعد.</p>
+            ) : null}
+
+            {(form.bank_accounts || []).length < 10 ? (
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                onClick={() => setField('bank_accounts', [...(form.bank_accounts || []), newBankAccount()])}
+              >
+                <Plus size={16} /> إضافة حساب مصرفي
+              </button>
+            ) : null}
+          </div>
+        </form>
       )}
 
       {/* Sticky save for tabs without their own submit row (social has in-form save) */}
