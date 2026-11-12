@@ -13,6 +13,8 @@ import { LoadingSpinner } from '@shared/ui';
 import { ProductImageGallery } from '@modules/store/components/ProductImageGallery';
 import { ProductDetailAccordions } from '@modules/store/components/ProductDetailAccordions';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
+import { RecentlyViewedSection } from '@modules/store/components/RecentlyViewedSection';
+import { recordRecentlyViewed } from '@modules/store/hooks/useRecentlyViewed';
 import { useCart } from '@modules/store/context/CartContext';
 import { startBuyNow } from '@modules/store/utils/buyNow';
 import { flyToCart } from '@modules/store/utils/flyToCart';
@@ -136,6 +138,10 @@ export default function ProductDetailPage() {
   });
 
   const product = data?.data;
+  // Remember this product for "شاهدته مؤخراً" (this browser only)
+  useEffect(() => {
+    if (product?.id) recordRecentlyViewed(product.id);
+  }, [product?.id]);
 
   const { data: picks = [] } = useQuery({
     queryKey: ['picks-for-you', product?.id, product?.category_id],
@@ -639,6 +645,8 @@ export default function ProductDetailPage() {
           {buyButtons}
         </div>
       </div>
+
+      <RecentlyViewedSection excludeId={product?.id} className="!py-8 sm:!py-12" />
 
       {picks.length > 0 && (
         <div className="border-t border-ink-100 dark:border-gray-800 bg-tertiary-100/60 dark:bg-ink-900/40 pb-4 sm:pb-0">

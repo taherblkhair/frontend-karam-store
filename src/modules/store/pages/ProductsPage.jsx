@@ -9,6 +9,10 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
+import { useStoreBrands, productsCountLabel } from '@modules/store/components/BrandTile';
+import { brandFromSettings } from '@modules/store/utils/brand';
+import { usePageMeta } from '@shared/hooks/usePageMeta';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
 import {
@@ -42,16 +46,58 @@ const SORT_LABELS = [
  */
 function CategoryFilterBar({ categories, activeId, onSelect }) {
   if (!categories?.length) return null;
+  const chip = (active) =>
+    `inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition ${
+      active
+        ? 'border-primary-600 bg-primary-600 text-white'
+        : 'border-ink-100 bg-white text-ink-700 hover:border-primary-600/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200'
+    }`;
+  return (
+    <nav aria-label="التصنيفات" className="-mx-4 mb-5 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 snap-x scrollbar-none">
+      <button type="button" onClick={() => onSelect('')} className={chip(!activeId)} aria-pressed={!activeId}>
+        {!activeId ? <Check size={15} aria-hidden /> : null} الكل
+      </button>
+      {categories.map((c) => {
+        const active = String(c.id) === String(activeId);
+        return (
+          <button key={c.id} type="button" onClick={() => onSelect(active ? '' : String(c.id))} className={chip(active)} aria-pressed={active}>
+            {active ? <Check size={15} aria-hidden /> : null} {c.name_ar}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
 
-  const active = categories.find((c) => String(c.id) === String(activeId));
-  const isAll = !activeId;
-
-
+/** One removable chip per active filter, so a visitor sees (and undoes) what narrows the list. */
+function ActiveFilterChips({ chips, onClear }) {
+  if (!chips.length) return null;
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="الفلاتر المطبقة">
+      {chips.map((c) => (
+        <button
+          key={c.key}
+          type="button"
+          onClick={c.onRemove}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200"
+          aria-label={`إزالة فلتر ${c.label}`}
+        >
+          {c.label} <X size={14} aria-hidden />
+        </button>
+      ))}
+      {chips.length > 1 ? (
+        <button type="button" onClick={onClear} className="text-sm font-medium text-ink-500 underline underline-offset-4 hover:text-ink-700">
+          مسح الكل
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 function FilterFields({
   filters,
   categories,
+  brands,
   colorsData,
   sizesData,
   updateFilter,
@@ -100,8 +146,28 @@ function FilterFields({
         </select>
       </div>
 
+      {brands.length ? (
+        <div>
+          <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">البراند</h3>
+          <select
+            className="input"
+            value={filters.brand}
+            onChange={(e) => updateFilter('brand', e.target.value)}
+            aria-label="البراند"
+          >
+            <option value="">الكل</option>
+            {brands.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name_en || b.name_ar}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       <div>
         <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">السعر (د.ل)</h3>
+        <p className="text-xs text-ink-400 mb-2">حسب السعر الحالي، شامل تخفيضات الحملات</p>
         <div className="flex gap-2">
           <input
             type="number"
@@ -154,15 +220,33 @@ function FilterFields({
         </select>
       </div>
       <div>
-        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">العروض</h3>
+        <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">التوفر والعروض</h3>
         <label className="flex items-center gap-2 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            className="rounded border-ink-200 text-primary-600 focus:ring-primary-600"
+            checked={filters.in_stock === 'true'}
+            onChange={(e) => updateFilter('in_stock', e.target.checked ? 'true' : '')}
+          />
+          المتوفر فقط
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm mt-2">
+          <input
+            type="checkbox"
+            className="rounded border-ink-200 text-primary-600 focus:ring-primary-600"
+            checked={filters.on_sale === 'true'}
+            onChange={(e) => updateFilter('on_sale', e.target.checked ? 'true' : '')}
+          />
+          عليه خصم
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm mt-2">
           <input
             type="checkbox"
             className="rounded border-ink-200 text-primary-600 focus:ring-primary-600"
             checked={filters.featured === 'true'}
             onChange={(e) => updateFilter('featured', e.target.checked ? 'true' : '')}
           />
-          عروض مميزة فقط
+          اخترنا لك
         </label>
         <label className="flex items-center gap-2 cursor-pointer text-sm mt-2">
           <input
@@ -213,6 +297,9 @@ export default function ProductsPage() {
     size: params.get('size') || '',
     is_new: params.get('is_new') || '',
     featured: params.get('featured') || '',
+    brand: params.get('brand') || '',
+    in_stock: params.get('in_stock') || '',
+    on_sale: params.get('on_sale') || '',
     sort: SORT_PRESETS[sortKey] ? sortKey : 'newest',
     sortBy: sortPreset.sortBy,
     sortOrder: sortPreset.sortOrder,
@@ -227,6 +314,9 @@ export default function ProductsPage() {
     filters.size,
     filters.is_new,
     filters.featured,
+    filters.brand,
+    filters.in_stock,
+    filters.on_sale,
     filters.sort !== 'newest' ? filters.sort : '',
   ].filter(Boolean).length;
 
@@ -240,6 +330,9 @@ export default function ProductsPage() {
       size: filters.size || undefined,
       is_new: filters.is_new || undefined,
       featured: filters.featured || undefined,
+      brand: filters.brand || undefined,
+      in_stock: filters.in_stock || undefined,
+      on_sale: filters.on_sale || undefined,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
     }),
@@ -297,18 +390,54 @@ export default function ProductsPage() {
     (c) => String(c.id) === String(filters.category)
   );
 
+  const { data: brands = [] } = useStoreBrands();
+  const activeBrand = brands.find((b) => String(b.id) === String(filters.brand));
+  const { data: settingsData } = useQuery({ ...storeSettingsQuery, staleTime: 60_000 });
+  const brandName = brandFromSettings(settingsData?.data || {});
+
   const pageHeading =
-    filters.featured === 'true'
-      ? 'عروض مميزة'
+    filters.search
+      ? `نتائج البحث عن «${filters.search}»`
+      : filters.on_sale === 'true'
+      ? 'العروض والتخفيضات'
+      : filters.featured === 'true'
+      ? 'اخترنا لك'
       : filters.is_new === 'true'
         ? 'وصل حديثاً'
         : activeCategory
           ? activeCategory.name_ar
           : 'المنتجات';
 
+  usePageMeta({ title: `${pageHeading} | ${brandName.full}` });
+
+  const sortLabel = SORT_LABELS.find((s) => s.value === filters.sort)?.label;
+  const activeChips = [
+    filters.search && { key: 'search', label: `بحث: ${filters.search}`, onRemove: () => updateFilter('search', '') },
+    activeCategory && { key: 'category', label: activeCategory.name_ar, onRemove: () => updateFilter('category', '') },
+    activeBrand && { key: 'brand', label: activeBrand.name_en || activeBrand.name_ar, onRemove: () => updateFilter('brand', '') },
+    (filters.min_price || filters.max_price) && {
+      key: 'price',
+      label: `السعر ${filters.min_price || 0}–${filters.max_price || '∞'} د.ل`,
+      onRemove: () => {
+        const next = new URLSearchParams(params);
+        next.delete('min_price');
+        next.delete('max_price');
+        setParams(next);
+      },
+    },
+    filters.color && { key: 'color', label: `اللون: ${colorsData?.data?.find((c) => String(c.id) === filters.color)?.name_ar || ''}`, onRemove: () => updateFilter('color', '') },
+    filters.size && { key: 'size', label: `المقاس: ${sizesData?.data?.find((s) => String(s.id) === filters.size)?.name || ''}`, onRemove: () => updateFilter('size', '') },
+    filters.in_stock === 'true' && { key: 'in_stock', label: 'المتوفر فقط', onRemove: () => updateFilter('in_stock', '') },
+    filters.on_sale === 'true' && { key: 'on_sale', label: 'عليه خصم', onRemove: () => updateFilter('on_sale', '') },
+    filters.featured === 'true' && { key: 'featured', label: 'اخترنا لك', onRemove: () => updateFilter('featured', '') },
+    filters.is_new === 'true' && { key: 'is_new', label: 'وصل حديثاً', onRemove: () => updateFilter('is_new', '') },
+    filters.sort !== 'newest' && { key: 'sort', label: `ترتيب: ${sortLabel}`, onRemove: () => updateFilter('sort', '') },
+  ].filter(Boolean);
+
   const filterProps = {
     filters,
     categories,
+    brands,
     colorsData,
     sizesData,
     updateFilter,
@@ -326,7 +455,7 @@ export default function ProductsPage() {
             <p className="text-sm text-ink-400 mt-1">
               {total != null ? (
                 <>
-                  {total} منتج
+                  {productsCountLabel(total)}
                   {activeCategory ? (
                     <span className="text-ink-500">
                       {' '}
@@ -376,6 +505,8 @@ export default function ProductsPage() {
           activeId={filters.category}
           onSelect={(id) => updateFilter('category', id)}
         />
+
+        <ActiveFilterChips chips={activeChips} onClear={clearFilters} />
 
         {/* Products region */}
         <div className="mb-3 flex items-center gap-2 border-t border-ink-100 pt-5 dark:border-gray-700">
@@ -460,7 +591,7 @@ export default function ProductsPage() {
                     </button>
                   )}
                   <button type="button" onClick={closeFilters} className="btn-primary flex-1 rounded-full">
-                    عرض النتائج
+                    {total != null ? (total ? `عرض ${productsCountLabel(total)}` : 'لا توجد نتائج') : 'عرض النتائج'}
                   </button>
                 </div>
               </div>
@@ -471,7 +602,14 @@ export default function ProductsPage() {
             {isLoading ? (
               <LoadingSpinner />
             ) : products.length === 0 ? (
-              <EmptyState message="لا توجد منتجات مطابقة للفلتر" />
+              <div className="py-12 text-center">
+                <EmptyState message={filters.search ? `لا توجد نتائج لـ «${filters.search}»` : 'لا توجد منتجات مطابقة للفلتر'} />
+                {activeFilterCount > 0 ? (
+                  <button type="button" onClick={clearFilters} className="btn-outline rounded-full mt-4">
+                    مسح الفلاتر وعرض كل المنتجات
+                  </button>
+                ) : null}
+              </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">

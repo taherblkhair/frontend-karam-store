@@ -29,6 +29,8 @@ export const storeApi = {
     data instanceof FormData
       ? api.post(endpoints.store.orders, data, { headers: { 'Content-Type': 'multipart/form-data' } })
       : api.post(endpoints.store.orders, data),
+  /** Logged-in customer's own orders (account page) */
+  myOrders: () => api.get(`${endpoints.store.orders}/mine`),
   /** Read-only tracking: { query, phone } or { query, token } */
   trackOrder: (data) => api.post(`${endpoints.store.orders}/track`, data),
 };

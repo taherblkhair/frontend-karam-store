@@ -17,6 +17,7 @@ import { PromoBanner } from '@modules/store/components/home/PromoBanner';
 import { WhyKaramSection } from '@modules/store/components/home/WhyKaramSection';
 import { SocialSection } from '@modules/store/components/home/SocialSection';
 import { brandFromSettings } from '@modules/store/utils/brand';
+import { RecentlyViewedSection } from '@modules/store/components/RecentlyViewedSection';
 
 const HOME_BRANDS_LIMIT = 10;
 
@@ -153,6 +154,8 @@ export default function HomePage() {
             products={home?.featuredProducts || []}
             showVariantImages
           />
+
+          <RecentlyViewedSection />
 
           <BrandsSection />
 

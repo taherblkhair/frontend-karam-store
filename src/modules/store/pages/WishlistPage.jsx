@@ -11,6 +11,7 @@ import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { StoreProductCard } from '@modules/store/components/StoreProductCard';
 import { useWishlist } from '@modules/store/hooks/useWishlist';
 import { brandFromSettings } from '@modules/store/utils/brand';
+import { productsCountLabel } from '@modules/store/components/BrandTile';
 
 const MAX_IDS = 60;
 
@@ -55,7 +56,7 @@ export default function WishlistPage() {
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink-800 dark:text-white">المفضلة</h1>
             <p className="mt-1 text-sm text-ink-500">
-              {ids.length ? `${ids.length} منتج محفوظ في هذا المتصفح` : 'المنتجات التي تحفظها تظهر هنا'}
+              {ids.length ? `${productsCountLabel(ids.length)} في المفضلة — محفوظة على هذا الجهاز` : 'المنتجات التي تحفظها تظهر هنا'}
             </p>
           </div>
           {ids.length ? (

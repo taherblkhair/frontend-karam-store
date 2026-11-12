@@ -8,6 +8,7 @@ import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { FieldError, FormAlert, LoadingSpinner } from '@shared/ui';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
 import StoreLayout from '@shared/layouts/StoreLayout';
+import { MyOrders } from '@modules/auth/components/MyOrders';
 import {
   isValidLibyaMobile,
   normalizeLibyaPhone,
@@ -107,12 +108,14 @@ export default function AccountPage() {
           </button>
         </div>
 
+        <MyOrders />
+
         <Link
           to="/track-order"
           className="card p-4 mb-4 flex items-center gap-3 hover:border-primary-600/40 transition"
         >
           <Truck size={20} className="text-primary-600 shrink-0" />
-          <span className="flex-1 font-bold">تتبع طلباتك</span>
+          <span className="flex-1 font-bold">تتبع طلب برقمه</span>
           <ChevronLeft size={18} className="text-ink-400" />
         </Link>
 

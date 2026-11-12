@@ -6,6 +6,7 @@ import { campaignPath } from '@modules/campaigns/utils/campaign';
 import { CampaignCountdown } from '@modules/campaigns/components/CampaignCountdown';
 import { formatCampaignEnd } from '@modules/store/utils/campaignDisplay';
 import { HomeSection, SCROLL_ROW } from './HomeSection';
+import { productsCountLabel } from '@modules/store/components/BrandTile';
 
 const COUNTDOWN_WITHIN_MS = 72 * 3600 * 1000;
 
@@ -54,7 +55,7 @@ function CampaignCard({ campaign, serverTime, featured, onExpire }) {
               <CalendarClock size={16} aria-hidden /> ينتهي {ends}
             </span>
           ) : null}
-          {campaign.products_count ? <span>{campaign.products_count} منتج</span> : null}
+          {campaign.products_count ? <span>{productsCountLabel(campaign.products_count)}</span> : null}
         </div>
         {endsSoon ? (
           <CampaignCountdown endsAt={campaign.ends_at} serverTime={serverTime} variant="inline" onExpire={onExpire} className="text-secondary-300" />
