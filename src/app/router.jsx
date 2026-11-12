@@ -16,6 +16,8 @@ import NotFoundPage from '@modules/store/pages/NotFoundPage';
 import PublicCatchAll from '@modules/store/pages/PublicCatchAll';
 import CampaignPage from '@modules/store/pages/CampaignPage';
 import TrackOrderPage from '@modules/store/pages/TrackOrderPage';
+import WishlistPage from '@modules/store/pages/WishlistPage';
+import PolicyPage from '@modules/store/pages/PolicyPage';
 
 const CHUNK_RELOAD_KEY = 'karam-chunk-reload';
 
@@ -104,6 +106,8 @@ export function AppRouter() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/track-order" element={<TrackOrderPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/pages/:slug" element={<PolicyPage />} />
             <Route element={<GuestRoute />}>
               <Route path="/register" element={<RegisterPage />} />
             </Route>

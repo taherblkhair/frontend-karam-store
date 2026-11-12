@@ -6,27 +6,8 @@ import { buildResponsiveMedia } from '@core/api/config.js';
 const SWIPE_THRESHOLD_PX = 48;
 const TRANSITION_MS = 500;
 
-function FallbackHero() {
-  return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-l from-primary-700 to-primary-900">
-      <div className="aspect-[5/4] sm:aspect-[16/7] lg:aspect-[21/8] flex items-center">
-        <div className="container mx-auto px-4 text-white py-10" dir="rtl">
-          <h1 className="text-3xl sm:text-4xl  text-white md:text-5xl font-bold mb-3 max-w-2xl leading-tight">
-            متجر كرم — أفضل الحقائب في ليبيا
-          </h1>
-          <p className="text-base sm:text-lg opacity-90 mb-6 max-w-xl">
-            أفضل المنتجات بأسعار منافسة — الدفع عند الاستلام
-          </p>
-          <Link to="/products" className="btn bg-white text-primary-700 hover:bg-gray-100">
-            تسوق الآن
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SlideContent({ banner, priority }) {
+function SlideContent({ banner, priority, asH1 = false }) {
+  const Heading = asH1 ? 'h1' : 'h2';
   const href = banner.link?.trim() || '/products';
   const isExternal = /^https?:\/\//i.test(href);
   const media = buildResponsiveMedia(banner.image, { widths: [800, 1200] });
@@ -60,9 +41,9 @@ function SlideContent({ banner, priority }) {
         >
           <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-0 text-white max-w-3xl">
             {banner.title_ar ? (
-              <h2 className="text-2xl text-white/90 sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 leading-tight drop-shadow-md line-clamp-3">
+              <Heading className="text-2xl text-white sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 leading-tight drop-shadow-md line-clamp-3">
                 {banner.title_ar}
-              </h2>
+              </Heading>
             ) : null}
             {banner.subtitle_ar ? (
               <p className="text-sm sm:text-lg md:text-xl text-white/90 mb-4 sm:mb-6 max-w-xl line-clamp-3 drop-shadow">
@@ -106,8 +87,10 @@ function SlideContent({ banner, priority }) {
  * - smooth CSS slide transition
  * - touch swipe on mobile
  * - dots + arrow navigation indicators
+ * `firstTitleAsH1`: the first slide's title is the page's single H1 (homepage).
+ * `fallback`: rendered when there is no banner (the page decides what to show).
  */
-export function BannerCarousel({ banners = [], autoPlayMs = 5000 }) {
+export function BannerCarousel({ banners = [], autoPlayMs = 5000, firstTitleAsH1 = false, fallback = null }) {
   const slides = Array.isArray(banners) ? banners.filter((b) => b?.image) : [];
   const count = slides.length;
 
@@ -227,7 +210,7 @@ export function BannerCarousel({ banners = [], autoPlayMs = 5000 }) {
     }
   };
 
-  if (!count) return <FallbackHero />;
+  if (!count) return fallback;
 
   const trackWidthPct = count * 100;
   const basePct = -((index * 100) / count);
@@ -273,11 +256,12 @@ export function BannerCarousel({ banners = [], autoPlayMs = 5000 }) {
                 className="relative h-full shrink-0"
                 style={{ width: `${100 / count}%` }}
                 aria-hidden={i !== index}
+                inert={i !== index ? '' : undefined}
                 role="group"
                 aria-roledescription="slide"
                 aria-label={`${i + 1} من ${count}`}
               >
-                <SlideContent banner={banner} priority={i === 0 || i === index} />
+                <SlideContent banner={banner} priority={i === 0} asH1={firstTitleAsH1 && i === 0} />
               </div>
             ))}
           </div>

@@ -18,9 +18,15 @@ const emptyBanner = {
   subtitle_en: '',
   image: '',
   link: '',
+  placement: 'hero',
   sort_order: 0,
   is_active: true,
 };
+
+const PLACEMENTS = [
+  { value: 'hero', label: 'أعلى الصفحة الرئيسية (الشرائح)' },
+  { value: 'promo', label: 'وسط الصفحة الرئيسية (بنر ترويجي)' },
+];
 
 /** Recommended hero image size shown in admin UI */
 const SIZE_HINT = {
@@ -119,6 +125,7 @@ export default function BannersPage() {
       subtitle_en: b.subtitle_en || '',
       image: b.image || '',
       link: b.link || '',
+      placement: b.placement === 'promo' ? 'promo' : 'hero',
       sort_order: b.sort_order ?? 0,
       is_active: b.is_active !== false,
     });
@@ -209,6 +216,7 @@ export default function BannersPage() {
 
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                     <span>الترتيب: {b.sort_order ?? 0}</span>
+                    <span>{b.placement === 'promo' ? 'وسط الصفحة' : 'أعلى الصفحة'}</span>
                     {b.link ? (
                       <span className="inline-flex items-center gap-1 truncate max-w-full">
                         <ExternalLink size={12} />
@@ -308,6 +316,21 @@ export default function BannersPage() {
               value={form.subtitle_ar}
               onChange={(e) => setForm({ ...form, subtitle_ar: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label htmlFor="banner-placement" className="block text-sm font-medium mb-1.5">موضع البنر</label>
+            <select
+              id="banner-placement"
+              className="input"
+              value={form.placement}
+              onChange={(e) => setForm({ ...form, placement: e.target.value })}
+            >
+              {PLACEMENTS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">البنر الترويجي يظهر بين «الأكثر مبيعاً» و«وصل حديثاً» (حتى بنرين).</p>
           </div>
 
           <div>

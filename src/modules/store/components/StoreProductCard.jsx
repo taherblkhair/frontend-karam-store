@@ -10,52 +10,10 @@ import { useCart } from '@modules/store/context/CartContext';
 import { productPath } from '@modules/store/utils/productPaths';
 import { flyToCart } from '@modules/store/utils/flyToCart';
 import { QuickBuyModal } from '@modules/store/components/QuickBuyModal';
+import { useWishlist } from '@modules/store/hooks/useWishlist';
 
-const WISHLIST_KEY = 'karam-wishlist-ids';
-
-function readWishlist() {
-  try {
-    const raw = localStorage.getItem(WISHLIST_KEY);
-    const list = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? list.map(String) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeWishlist(ids) {
-  localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
-  window.dispatchEvent(new CustomEvent('karam-wishlist'));
-}
-
-export function useWishlist() {
-  const [ids, setIds] = useState(() =>
-    typeof window === 'undefined' ? [] : readWishlist()
-  );
-
-  useEffect(() => {
-    const sync = () => setIds(readWishlist());
-    window.addEventListener('storage', sync);
-    window.addEventListener('karam-wishlist', sync);
-    return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('karam-wishlist', sync);
-    };
-  }, []);
-
-  const isSaved = useCallback((id) => ids.includes(String(id)), [ids]);
-
-  const toggle = useCallback((id) => {
-    const key = String(id);
-    setIds((prev) => {
-      const next = prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key];
-      writeWishlist(next);
-      return next;
-    });
-  }, []);
-
-  return { ids, isSaved, toggle };
-}
+// Favourites hook moved to hooks/useWishlist (shared with the header and the favourites page)
+export { useWishlist };
 
 /**
  * Primary + unique variant images for card preview.
@@ -119,7 +77,7 @@ function CardIconButton({ label, onClick, pressed, disabled, busy, children }) {
       title={label}
       aria-pressed={pressed}
       aria-busy={busy || undefined}
-      className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border transition active:scale-95 ${
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition active:scale-95 ${
         pressed
           ? 'border-primary-600 bg-primary-50 text-primary-600 dark:bg-primary-900/30'
           : 'border-ink-100 bg-white text-ink-600 hover:border-primary-600 hover:bg-primary-600 hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
@@ -177,11 +135,14 @@ export function StoreProductCard({
   const campaign = product.campaign || null;
   const campaignPercent = campaign ? Math.round(Number(product.discount_percent) || 0) : 0;
 
-  const label =
-    badge ||
-    (campaignPercent > 0 ? `خصم ${campaignPercent}%` : null) ||
-    (showNewBadge || product.is_new ? 'جديد' : null) ||
-    (hasDiscount ? 'عرض' : null);
+  // One badge only, most useful first: real discount % → new → the section's own label
+  const comparePercent = hasDiscount
+    ? Math.round((1 - parseFloat(product.price) / parseFloat(product.compare_price)) * 100)
+    : 0;
+  const discountPct = campaignPercent > 0 ? campaignPercent : comparePercent;
+  const isNew = showNewBadge || product.is_new;
+  const label = discountPct > 0 ? `خصم ${discountPct}%` : isNew ? 'جديد' : badge || null;
+  const labelTone = discountPct > 0 ? 'bg-secondary-400 text-primary-900' : 'bg-primary-600 text-white';
 
   const go = (step) => setIndex((i) => (i + step + count) % count);
 
@@ -274,7 +235,7 @@ export function StoreProductCard({
                   ? `${product.name_ar} — ${active.color_name}`
                   : product.name_ar
               }
-              className={`h-full w-full ${activeUnavailable ? 'opacity-60 grayscale-[60%]' : ''}`}
+              className={`h-full w-full ${activeUnavailable || outOfStock ? 'opacity-60 grayscale-[60%]' : ''}`}
               imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
               widths={[400, 800]}
@@ -325,43 +286,24 @@ export function StoreProductCard({
               {activeUnavailable && active?.color_name ? `${active.color_name} غير متوفر` : 'غير متوفر'}
             </span>
           ) : label ? (
-            <>
-              <span className="rounded-md bg-secondary-400 px-2 py-0.5 text-[11px] font-bold text-primary-900 shadow-sm">
-                {label}
-              </span>
-              {campaign ? (
-                <span className="max-w-[9rem] truncate rounded-md bg-ink-800/90 px-2 py-0.5 text-[11px] font-semibold text-white">
-                  {campaign.name_ar}
-                </span>
-              ) : null}
-            </>
+            <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold shadow-sm ${labelTone}`}>{label}</span>
           ) : null}
         </div>
-      </div>
 
-      <div className="mt-2 flex items-center justify-center gap-2.5" role="group" aria-label="إجراءات سريعة">
-        <CardIconButton label="عرض سريع" onClick={() => runQuickAction('view')} busy={busyAction === 'view'}>
-          <Eye size={17} />
-        </CardIconButton>
-        <CardIconButton
-          label={saved ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+        <button
+          type="button"
           onClick={() => toggle(product.id)}
-          pressed={saved}
+          aria-pressed={saved}
+          aria-label={saved ? `إزالة «${product.name_ar}» من المفضلة` : `إضافة «${product.name_ar}» إلى المفضلة`}
+          title={saved ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+          className="absolute top-2 left-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-sm ring-1 ring-black/5 transition hover:text-primary-600 dark:bg-gray-900/80 dark:text-gray-200"
         >
-          <Heart size={17} className={saved ? 'fill-primary-600' : ''} />
-        </CardIconButton>
-        <CardIconButton
-          label={outOfStock ? 'غير متوفر' : 'أضف إلى السلة'}
-          onClick={() => runQuickAction('cart')}
-          disabled={outOfStock}
-          busy={busyAction === 'cart'}
-        >
-          <ShoppingCart size={17} />
-        </CardIconButton>
+          <Heart size={18} className={saved ? 'fill-primary-600 text-primary-600' : ''} />
+        </button>
       </div>
 
-      <Link to={href} className="mt-2 block flex-1 px-1 text-start">
-        <h3 className="font-display text-sm sm:text-[15px] font-bold text-ink-800 leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors dark:text-gray-100">
+      <Link to={href} className="mt-2.5 block flex-1 px-1 text-start">
+        <h3 className="font-display text-sm sm:text-[15px] font-bold text-ink-800 leading-snug line-clamp-2 min-h-[2.75em] group-hover:text-primary-600 transition-colors dark:text-gray-100">
           {product.name_ar}
         </h3>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -369,19 +311,33 @@ export function StoreProductCard({
             {formatPrice(product.price)}
           </p>
           {hasDiscount && (
-            <p className="text-xs text-ink-300 line-through tabular-nums">
+            <p className="text-xs text-ink-400 line-through tabular-nums">
+              <span className="sr-only">السعر قبل الخصم </span>
               {formatPrice(product.compare_price)}
             </p>
           )}
         </div>
       </Link>
 
-      <Link
-        to={href}
-        className="mt-2.5 flex h-10 w-full items-center justify-center rounded-xl border border-primary-600 text-sm font-bold text-primary-600 transition hover:bg-primary-600 hover:text-white active:scale-[0.99] dark:border-primary-400 dark:text-primary-300"
-      >
-        عرض الصنف
-      </Link>
+      <div className="mt-2.5 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => runQuickAction('cart')}
+          disabled={outOfStock || busyAction === 'cart'}
+          aria-label={outOfStock ? `«${product.name_ar}» غير متوفر` : `أضف «${product.name_ar}» إلى السلة`}
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary-600 text-sm font-bold text-primary-600 transition hover:bg-primary-600 hover:text-white active:scale-[0.99] disabled:cursor-not-allowed disabled:border-ink-200 disabled:text-ink-400 disabled:hover:bg-transparent dark:border-primary-400 dark:text-primary-300"
+        >
+          {busyAction === 'cart' ? (
+            <Loader2 size={16} className="animate-spin" aria-hidden />
+          ) : outOfStock ? null : (
+            <ShoppingCart size={16} aria-hidden />
+          )}
+          {outOfStock ? 'غير متوفر' : 'أضف للسلة'}
+        </button>
+        <CardIconButton label={`عرض سريع: ${product.name_ar}`} onClick={() => runQuickAction('view')} busy={busyAction === 'view'}>
+          <Eye size={17} />
+        </CardIconButton>
+      </div>
 
       <QuickBuyModal
         product={modalProduct}
@@ -413,9 +369,9 @@ export function StoreProductSection({
   if (!list.length) return null;
 
   return (
-    <section className={`container mx-auto px-4 py-10 sm:py-12 ${className}`}>
+    <section aria-label={title} className={`container mx-auto px-4 py-10 sm:py-12 ${className}`}>
       <div className="mb-5 sm:mb-6 flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
+        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight dark:text-white">
           {title}
         </h2>
         {to ? (

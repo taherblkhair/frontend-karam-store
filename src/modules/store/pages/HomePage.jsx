@@ -1,13 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
+import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner } from '@shared/ui';
+import { usePageMeta } from '@shared/hooks/usePageMeta';
 import { CategoryCard } from '@modules/store/components/CategoryCard';
 import { BannerCarousel } from '@modules/store/components/BannerCarousel';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { BrandShowcaseCard, useStoreBrands } from '@modules/store/components/BrandTile';
-import { Search } from 'lucide-react';
+import { HomeHero, HomeIntro } from '@modules/store/components/home/HomeHero';
+import { HomeSection, SCROLL_ROW } from '@modules/store/components/home/HomeSection';
+import { HomeCampaigns } from '@modules/store/components/home/HomeCampaigns';
+import { PromoBanner } from '@modules/store/components/home/PromoBanner';
+import { WhyKaramSection } from '@modules/store/components/home/WhyKaramSection';
+import { SocialSection } from '@modules/store/components/home/SocialSection';
+import { brandFromSettings } from '@modules/store/utils/brand';
 
 const HOME_BRANDS_LIMIT = 10;
 
@@ -17,28 +26,8 @@ function BrandsSection() {
   const visible = brands.slice(0, HOME_BRANDS_LIMIT);
 
   return (
-    <section className="container mx-auto px-4 pb-6 sm:pb-8">
-      <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
-          البراندات
-        </h2>
-        <div className="flex shrink-0 items-center gap-4">
-          <Link
-            to="/brands"
-            className="hidden md:inline-flex items-center gap-1.5 rounded-full border border-primary-600/20 bg-primary-50/70 px-3.5 py-1.5 text-sm font-medium text-primary-700 transition hover:border-primary-600/50 dark:bg-primary-900/20 dark:text-primary-200"
-          >
-            <Search size={15} aria-hidden /> ابحث عن براند
-          </Link>
-          <Link
-            to="/brands"
-            className="text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
-          >
-            عرض الكل
-          </Link>
-        </div>
-      </div>
-      {/* Mobile: ~2 cards in view with a peek of the next; md+: grid */}
-      <div className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 pt-0.5 snap-x snap-mandatory scroll-px-4 scrollbar-none md:mx-0 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible md:px-0 md:pb-0">
+    <HomeSection id="home-brands" title="البراندات" to="/brands" className="!pt-4">
+      <div className={`${SCROLL_ROW} md:mx-0 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible md:px-0 md:pb-0`}>
         {visible.map((brand) => (
           <BrandShowcaseCard key={brand.id} brand={brand} className="w-[45%] shrink-0 snap-start sm:w-[30%] md:w-auto" />
         ))}
@@ -53,31 +42,29 @@ function BrandsSection() {
           <span className="text-xs font-semibold leading-snug">ابحث عن براند</span>
         </Link>
       </div>
-    </section>
+    </HomeSection>
   );
 }
 
+/** Tablet 4 / desktop 6 per row: only full rows are shown there (the rest via «عرض الكل»); phones scroll all. */
+const fullRows = (count, cols) => (count <= cols ? count : Math.floor(count / cols) * cols);
+
 function CategoriesSection({ categories }) {
   if (!categories?.length) return null;
+  const tablet = fullRows(categories.length, 4);
+  const desktop = fullRows(categories.length, 6);
   return (
-    <section className="container mx-auto px-4 py-10 sm:py-12">
-      <div className="mb-5 sm:mb-6 flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl sm:text-2xl md:text-[1.65rem] font-bold text-ink-800 tracking-tight">
-          التصنيفات
-        </h2>
-        <Link
-          to="/products"
-          className="shrink-0 text-sm sm:text-base font-medium text-primary-600 underline underline-offset-4 decoration-primary-600/40 hover:decoration-primary-600 transition"
-        >
-          عرض الكل
-        </Link>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-        {categories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} />
+    <HomeSection id="home-categories" title="تسوّق حسب التصنيف" to="/products">
+      <div className={`${SCROLL_ROW} sm:mx-0 sm:grid sm:grid-cols-4 lg:grid-cols-6 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0`}>
+        {categories.map((cat, i) => (
+          <CategoryCard
+            key={cat.id}
+            category={cat}
+            className={`w-[38%] shrink-0 snap-start sm:w-auto ${i >= tablet ? 'sm:max-lg:hidden' : ''} ${i >= desktop ? 'lg:hidden' : ''}`}
+          />
         ))}
       </div>
-    </section>
+    </HomeSection>
   );
 }
 
@@ -90,17 +77,32 @@ export default function HomePage() {
     refetchOnWindowFocus: false,
     retry: 1,
   });
+  // Same cached ['settings'] query as the layout — no extra request
+  const { data: settingsData } = useQuery({ ...storeSettingsQuery, staleTime: 60_000 });
+  const settings = settingsData?.data || {};
+  const brand = brandFromSettings(settings);
+
+  usePageMeta({
+    title: `${brand.full} — ${brand.tagline}`,
+    description: String(settings.meta_description || '').trim() || undefined,
+  });
 
   const home = data?.data;
+  const banners = home?.banners || [];
+  const campaigns = home?.campaigns || [];
+  const firstHasTitle = Boolean(banners[0]?.title_ar);
 
   return (
     <StoreLayout>
-      <BannerCarousel banners={home?.banners || []} />
-
       {isLoading && !home ? (
-        <LoadingSpinner />
+        <>
+          <h1 className="sr-only">{brand.full}</h1>
+          <div className="aspect-[5/4] sm:aspect-[16/7] lg:aspect-[21/8] w-full animate-pulse bg-tertiary-200 dark:bg-gray-800" aria-hidden />
+          <LoadingSpinner />
+        </>
       ) : isError && !home ? (
         <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="font-display text-2xl font-bold mb-3">{brand.ar}</h1>
           <p className="text-ink-600 mb-4">تعذر تحميل الصفحة الرئيسية</p>
           <p className="text-sm text-ink-400 mb-6">{error?.message || ''}</p>
           <button type="button" className="btn-primary rounded-full" onClick={() => refetch()}>
@@ -109,6 +111,14 @@ export default function HomePage() {
         </div>
       ) : (
         <>
+          {/* One H1: first banner title → or a visible intro under an image-only banner → or the hero */}
+          <BannerCarousel
+            banners={banners}
+            firstTitleAsH1={firstHasTitle}
+            fallback={<HomeHero campaign={campaigns.find((c) => c.banner_image)} brand={brand} />}
+          />
+          {banners.length > 0 && !firstHasTitle ? <HomeIntro brand={brand} /> : null}
+
           {isFetching && home ? (
             <div className="h-0.5 w-full bg-primary-100 overflow-hidden" aria-hidden>
               <div className="h-full w-1/3 bg-primary-600/40 animate-pulse" />
@@ -117,16 +127,17 @@ export default function HomePage() {
 
           <CategoriesSection categories={home?.categories} />
 
-          <BrandsSection />
+          <HomeCampaigns campaigns={campaigns} serverTime={home?.server_time} />
 
           <StoreProductSection
-            title="عروض مميزة"
-            to="/products?featured=true"
-            products={home?.featuredProducts || []}
-            badge="مميز"
+            title="الأكثر مبيعاً"
+            to="/products"
+            products={home?.topSelling || []}
             showVariantImages
-            priorityFirst
+            priorityFirst={!banners.length && !campaigns.length}
           />
+
+          <PromoBanner banners={home?.promoBanners || []} />
 
           <StoreProductSection
             title="وصل حديثاً"
@@ -137,16 +148,19 @@ export default function HomePage() {
           />
 
           <StoreProductSection
-            title="الأكثر مبيعاً"
-            to="/products"
-            products={home?.topSelling || []}
-            badge="رائج"
+            title="اخترنا لك"
+            to="/products?featured=true"
+            products={home?.featuredProducts || []}
             showVariantImages
           />
+
+          <BrandsSection />
+
+          <WhyKaramSection brand={brand} settings={settings} />
+
+          <SocialSection brand={brand} settings={settings} />
         </>
       )}
     </StoreLayout>
   );
 }
-// import { useQuery } from '@tanstack/react-query';
-// import { storeApi } from '@modules/store/api/store.api';

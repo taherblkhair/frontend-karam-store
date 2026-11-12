@@ -13,6 +13,7 @@ import {
   Share2,
   Construction,
   Landmark,
+  FileText,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const TABS = [
   { id: 'currency', label: 'العملة', icon: Coins },
   { id: 'shipping', label: 'أسعار التوصيل', icon: Truck },
   { id: 'bank', label: 'التحويل المصرفي', icon: Landmark },
+  { id: 'content', label: 'المحتوى والسياسات', icon: FileText },
 ];
 
 const newBankAccount = () => ({
@@ -414,7 +416,7 @@ export default function SettingsPage() {
                 className="input"
                 value={form.store_name_en || ''}
                 onChange={(e) => setField('store_name_en', e.target.value)}
-                placeholder="Karam Store"
+                placeholder="Karam Bags"
               />
             </Field>
           </div>
@@ -784,6 +786,59 @@ export default function SettingsPage() {
               </button>
             ) : null}
           </div>
+        </form>
+      )}
+
+      {/* Content & policies */}
+      {tab === 'content' && (
+        <form onSubmit={saveSettings} className="card p-6 space-y-5">
+          <div>
+            <h2 className="font-bold text-lg">المحتوى والسياسات</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              نصوص تظهر في الصفحة الرئيسية والتذييل ونتائج البحث. السياسة الفارغة لا يظهر رابطها في المتجر.
+            </p>
+          </div>
+          <Field label="الشعار النصي (تحت اسم المتجر)" hint="مثال: حقائب وأحذية نسائية في ليبيا — يظهر في الواجهة الرئيسية وعنوان الصفحة">
+            <input
+              className="input"
+              maxLength={300}
+              value={form.store_tagline || ''}
+              onChange={(e) => setField('store_tagline', e.target.value)}
+              placeholder="حقائب وأحذية نسائية في ليبيا"
+            />
+          </Field>
+          <Field label="نبذة عن المتجر" hint="تظهر في تذييل الموقع">
+            <textarea
+              className="input min-h-[90px] resize-y"
+              maxLength={600}
+              value={form.store_about || ''}
+              onChange={(e) => setField('store_about', e.target.value)}
+            />
+          </Field>
+          <Field label="وصف الموقع لمحركات البحث" hint="يظهر تحت اسم المتجر في نتائج Google — 150 إلى 160 حرفاً">
+            <textarea
+              className="input min-h-[70px] resize-y"
+              maxLength={300}
+              value={form.meta_description || ''}
+              onChange={(e) => setField('meta_description', e.target.value)}
+            />
+          </Field>
+          <Field label="سياسة الخصوصية" hint="نص عادي — كل سطر فقرة. الرابط يظهر في التذييل بعد الحفظ">
+            <textarea
+              className="input min-h-[180px] resize-y"
+              maxLength={20000}
+              value={form.policy_privacy || ''}
+              onChange={(e) => setField('policy_privacy', e.target.value)}
+            />
+          </Field>
+          <Field label="سياسة الاستبدال والاسترجاع" hint="نص عادي — كل سطر فقرة. الرابط يظهر في التذييل وقسم «لماذا» بعد الحفظ">
+            <textarea
+              className="input min-h-[180px] resize-y"
+              maxLength={20000}
+              value={form.policy_returns || ''}
+              onChange={(e) => setField('policy_returns', e.target.value)}
+            />
+          </Field>
         </form>
       )}
 

@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { resolveMediaUrl } from '@core/api/config.js';
+import { brandFromSettings } from '@modules/store/utils/brand';
+import { hasPageMeta } from '@shared/hooks/usePageMeta';
 
 const DEFAULT_FAVICON = '/favicon-32x32.png';
-const TITLE_TAGLINE = 'حقائب وأحذية نسائية في ليبيا';
-const DEFAULT_TITLE = `كرم للحقائب | ${TITLE_TAGLINE} – الدفع عند الاستلام`;
 
 function setLinkRel(rel, href, attrs = {}) {
   if (!href) return;
@@ -33,8 +33,11 @@ export function useStoreBranding() {
   const settings = data?.data || {};
 
   useEffect(() => {
-    const name = String(settings.store_name || '').trim();
-    document.title = name ? `${name} | ${TITLE_TAGLINE}` : DEFAULT_TITLE;
+    // Default title for pages that don't set their own (usePageMeta)
+    if (!hasPageMeta()) {
+      const brand = brandFromSettings(settings);
+      document.title = `${brand.full} — ${brand.tagline}`;
+    }
 
     const logo = resolveMediaUrl(settings.logo);
     const href = logo || DEFAULT_FAVICON;
@@ -45,7 +48,7 @@ export function useStoreBranding() {
     setLinkRel('icon', cacheBust, { type: 'image/png' });
     setLinkRel('shortcut icon', cacheBust, { type: 'image/png' });
     setLinkRel('apple-touch-icon', cacheBust);
-  }, [settings.store_name, settings.logo]);
+  }, [settings.store_name, settings.store_name_en, settings.store_tagline, settings.logo]);
 }
 
 /** Mount inside React tree (Providers) so react-query is available. */
