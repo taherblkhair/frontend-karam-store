@@ -14,7 +14,7 @@ import { useStoreBrands, productsCountLabel } from '@modules/store/components/Br
 import { brandFromSettings } from '@modules/store/utils/brand';
 import { usePageMeta } from '@shared/hooks/usePageMeta';
 import StoreLayout from '@shared/layouts/StoreLayout';
-import { ProductCard, LoadingSpinner, EmptyState } from '@shared/ui';
+import { ProductCard, EmptyState } from '@shared/ui';
 import {
   LoadMoreFooter,
   ProductCardSkeletons,
@@ -44,7 +44,19 @@ const SORT_LABELS = [
  * Category strip as filter navigation (not product cards).
  * Chip-style controls that filter products below.
  */
-function CategoryFilterBar({ categories, activeId, onSelect }) {
+function CategoryFilterBar({ categories, activeId, onSelect, loading }) {
+  // Same row height while categories load, so nothing below moves when they arrive
+  if (loading) {
+    return (
+      <div className="-mx-4 mb-5 flex gap-2 overflow-hidden px-4 pb-2" aria-hidden>
+        {[16, 20, 14, 18].map((w, i) => (
+          <span key={i} className="inline-flex shrink-0 rounded-full border border-transparent px-4 py-2 text-sm bg-tertiary-200 animate-pulse dark:bg-gray-700" style={{ width: `${w * 0.25}rem` }}>
+            &nbsp;
+          </span>
+        ))}
+      </div>
+    );
+  }
   if (!categories?.length) return null;
   const chip = (active) =>
     `inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition ${
@@ -98,6 +110,7 @@ function FilterFields({
   filters,
   categories,
   brands,
+  brandsLoading,
   colorsData,
   sizesData,
   updateFilter,
@@ -146,11 +159,12 @@ function FilterFields({
         </select>
       </div>
 
-      {brands.length ? (
+      {brands.length || brandsLoading ? (
         <div>
           <h3 className="font-semibold mb-2 text-sm text-ink-500 dark:text-gray-300">البراند</h3>
           <select
             className="input"
+            disabled={brandsLoading}
             value={filters.brand}
             onChange={(e) => updateFilter('brand', e.target.value)}
             aria-label="البراند"
@@ -349,7 +363,7 @@ export default function ProductsPage() {
     fetchNextPage,
   } = useInfiniteProducts(['products'], queryParams);
 
-  const { data: categoriesData } = useQuery({
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => storeApi.categories(),
   });
@@ -390,7 +404,7 @@ export default function ProductsPage() {
     (c) => String(c.id) === String(filters.category)
   );
 
-  const { data: brands = [] } = useStoreBrands();
+  const { data: brands = [], isLoading: brandsLoading } = useStoreBrands();
   const activeBrand = brands.find((b) => String(b.id) === String(filters.brand));
   const { data: settingsData } = useQuery({ ...storeSettingsQuery, staleTime: 60_000 });
   const brandName = brandFromSettings(settingsData?.data || {});
@@ -438,6 +452,7 @@ export default function ProductsPage() {
     filters,
     categories,
     brands,
+    brandsLoading,
     colorsData,
     sizesData,
     updateFilter,
@@ -504,6 +519,7 @@ export default function ProductsPage() {
           categories={categories}
           activeId={filters.category}
           onSelect={(id) => updateFilter('category', id)}
+          loading={categoriesLoading}
         />
 
         <ActiveFilterChips chips={activeChips} onClear={clearFilters} />
@@ -600,7 +616,11 @@ export default function ProductsPage() {
 
           <div className="flex-1 min-w-0">
             {isLoading ? (
-              <LoadingSpinner />
+              // Placeholder grid with the real grid + card sizes: the page keeps its height while
+              // products load, so the footer is not pulled up into view and pushed out again.
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6" role="status" aria-label="جاري تحميل المنتجات">
+                <ProductCardSkeletons count={6} />
+              </div>
             ) : products.length === 0 ? (
               <div className="py-12 text-center">
                 <EmptyState message={filters.search ? `لا توجد نتائج لـ «${filters.search}»` : 'لا توجد منتجات مطابقة للفلتر'} />

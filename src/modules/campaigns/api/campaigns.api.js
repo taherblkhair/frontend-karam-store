@@ -1,5 +1,6 @@
 import api from '@core/api/axios';
 import { endpoints } from '@core/api/endpoints';
+import { withEarlyFetch } from '@core/api/earlyFetch';
 
 const base = endpoints.campaigns;
 
@@ -20,7 +21,11 @@ export const campaignsApi = {
 
 /** Storefront (public) campaign endpoints */
 export const storeCampaignsApi = {
-  announcement: () => api.get(`${endpoints.store.campaigns}/announcement`),
+  // Started by index.html with the page (see earlyFetch) — the bar is usually known before first paint
+  announcement: () => {
+    const path = `${endpoints.store.campaigns}/announcement`;
+    return withEarlyFetch(path, () => api.get(path));
+  },
   active: () => api.get(`${endpoints.store.campaigns}/active`),
   bySlug: (slug, { preview = false } = {}) =>
     api.get(`${endpoints.store.campaigns}/${encodeURIComponent(String(slug || '').trim())}`, {

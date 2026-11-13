@@ -5,8 +5,40 @@ import { Flame } from 'lucide-react';
 import { storeCampaignsApi } from '@modules/campaigns/api/campaigns.api';
 import { CampaignCountdown } from '@modules/campaigns/components/CampaignCountdown';
 import { campaignPath } from '@modules/campaigns/utils/campaign';
+import { readJSON } from '@core/utils/storageGuard';
 
 export const ANNOUNCEMENT_QUERY_KEY = ['store-campaign-announcement'];
+const CACHE_KEY = 'karam-campaign-announcement';
+
+/**
+ * Last answer kept in localStorage and used as (stale) initial data, like store settings:
+ * a returning visitor gets the bar in the first paint instead of it pushing the page down
+ * when the request returns. An ended campaign in the cache is ignored.
+ */
+function cachedAnnouncement() {
+  const cached = readJSON(CACHE_KEY, undefined);
+  const endsAt = cached?.data?.campaign?.ends_at;
+  if (endsAt && new Date(endsAt).getTime() <= Date.now()) return undefined;
+  return cached;
+}
+
+/** Shared by the bar and StoreAccessGate (same key → one request). */
+export const announcementQuery = {
+  queryKey: ANNOUNCEMENT_QUERY_KEY,
+  queryFn: async () => {
+    const res = await storeCampaignsApi.announcement();
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(res));
+    } catch {
+      /* storage full / blocked */
+    }
+    return res;
+  },
+  initialData: cachedAnnouncement,
+  initialDataUpdatedAt: 0,
+  staleTime: 60_000,
+  retry: false,
+};
 
 /**
  * Top-of-store strip for the primary active campaign (chosen server-side by priority).
@@ -14,13 +46,7 @@ export const ANNOUNCEMENT_QUERY_KEY = ['store-campaign-announcement'];
  */
 export function CampaignAnnouncementBar() {
   const queryClient = useQueryClient();
-  const { data } = useQuery({
-    queryKey: ANNOUNCEMENT_QUERY_KEY,
-    queryFn: () => storeCampaignsApi.announcement(),
-    staleTime: 60_000,
-    refetchInterval: 5 * 60_000,
-    retry: false,
-  });
+  const { data } = useQuery({ ...announcementQuery, refetchInterval: 5 * 60_000 });
 
   const payload = data?.data;
   const campaign = payload?.campaign;

@@ -118,19 +118,28 @@ export function LoadMoreFooter({
   );
 }
 
-/** Placeholder cards shown at the end of the grid while the next batch loads. */
+/**
+ * Placeholder cards with the same box model as StoreProductCard (image 4/5, two-line title,
+ * price line, one 40px action row) so swapping in the real card does not move anything.
+ */
 export function ProductCardSkeletons({ count = 4 }) {
   return Array.from({ length: count }, (_, i) => (
-    <div key={`sk-${i}`} className="rounded-2xl border border-ink-100/80 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800" aria-hidden>
+    <div key={`sk-${i}`} className="flex flex-col rounded-2xl border border-ink-100/80 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800" aria-hidden>
       <div className="aspect-[4/5] animate-pulse rounded-xl bg-tertiary-200 dark:bg-gray-700" />
-      <div className="mt-2 flex justify-center gap-2.5">
-        {[0, 1, 2].map((k) => (
-          <div key={k} className="h-9 w-9 animate-pulse rounded-full bg-tertiary-100 dark:bg-gray-700" />
-        ))}
+      <div className="mt-2.5 px-1">
+        <div className="min-h-[2.75em] text-sm sm:text-[15px] leading-snug">
+          <div className="h-[1em] w-11/12 animate-pulse rounded bg-tertiary-200 dark:bg-gray-700" />
+          <div className="mt-[0.35em] h-[1em] w-2/3 animate-pulse rounded bg-tertiary-200 dark:bg-gray-700" />
+        </div>
+        {/* Same font size as the price → same line height as the real price row */}
+        <p className="mt-1.5 text-base sm:text-lg font-extrabold">
+          <span className="inline-block w-1/3 animate-pulse rounded bg-primary-100/60 dark:bg-gray-700">&nbsp;</span>
+        </p>
       </div>
-      <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-tertiary-200 dark:bg-gray-700" />
-      <div className="mt-2 h-5 w-1/3 animate-pulse rounded bg-primary-100/60 dark:bg-gray-700" />
-      <div className="mt-2.5 h-10 animate-pulse rounded-xl bg-tertiary-100 dark:bg-gray-700" />
+      <div className="mt-2.5 flex items-center gap-2">
+        <div className="h-10 flex-1 animate-pulse rounded-xl bg-tertiary-100 dark:bg-gray-700" />
+        <div className="h-10 w-10 animate-pulse rounded-full bg-tertiary-100 dark:bg-gray-700" />
+      </div>
     </div>
   ));
 }

@@ -106,6 +106,7 @@
         var path = location.pathname.replace(/\/+$/, '') || '/';
         if (/^\/(login|admin)(\/|$)/.test(path)) return;
         get('/store/settings');
+        get('/store/campaigns/announcement');
         if (path === '/') get('/store/home');
         var m = path.match(/^\/product\/([^/]+)$/);
         if (m) {
