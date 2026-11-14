@@ -462,12 +462,14 @@ export default function ProductsPage() {
     <StoreLayout>
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <div>
+          {/* flex-1 + min width: whether the buttons wrap depends only on which buttons exist
+              (a tap), never on the result text that arrives with the data */}
+          <div className="min-w-[10rem] flex-1">
             <h1 className="text-2xl sm:text-3xl text-primary-600">
               {pageHeading}
             </h1>
             {/* Line height is reserved while loading so the filters / grid don't jump */}
-            <p className="text-sm text-ink-400 mt-1">
+            <p className="text-sm text-ink-400 mt-1 truncate">
               {total != null ? (
                 <>
                   {productsCountLabel(total)}

@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { storeApi } from '@modules/store/api/store.api';
 import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import StoreLayout from '@shared/layouts/StoreLayout';
-import { LoadingSpinner } from '@shared/ui';
+import { ProductCardSkeletons } from '@modules/store/components/LoadMoreProducts';
 import { usePageMeta } from '@shared/hooks/usePageMeta';
 import { CategoryCard } from '@modules/store/components/CategoryCard';
 import { BannerCarousel } from '@modules/store/components/BannerCarousel';
@@ -98,8 +98,27 @@ export default function HomePage() {
       {isLoading && !home ? (
         <>
           <h1 className="sr-only">{brand.full}</h1>
-          <div className="aspect-[5/4] sm:aspect-[16/7] lg:aspect-[21/8] w-full animate-pulse bg-tertiary-200 dark:bg-gray-800" aria-hidden />
-          <LoadingSpinner />
+          {/* Hero, a category row and a product row with their real sizes (was a small spinner,
+              which pulled the footer into view and pushed it out again → CLS) */}
+          <div role="status" aria-label="جاري تحميل الصفحة">
+            <div className="aspect-[5/4] sm:aspect-[16/7] lg:aspect-[21/8] w-full animate-pulse bg-tertiary-200 dark:bg-gray-800" aria-hidden />
+            <div className="container mx-auto px-4 py-10 sm:py-12" aria-hidden>
+              <div className="mb-5 sm:mb-6 h-7 w-48 rounded bg-tertiary-200 animate-pulse dark:bg-gray-800" />
+              <div className="-mx-4 flex gap-3 overflow-hidden px-4 sm:mx-0 sm:grid sm:grid-cols-4 lg:grid-cols-6 sm:gap-4 sm:px-0">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="w-[38%] shrink-0 sm:w-auto">
+                    <div className="aspect-[4/5] rounded-2xl bg-tertiary-200 animate-pulse dark:bg-gray-800" />
+                    <div className="mt-2.5 mx-auto h-5 w-2/3 rounded bg-tertiary-200 animate-pulse dark:bg-gray-800" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="container mx-auto px-4 pb-10" aria-hidden>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-4 sm:gap-y-8">
+                <ProductCardSkeletons count={4} />
+              </div>
+            </div>
+          </div>
         </>
       ) : isError && !home ? (
         <div className="container mx-auto px-4 py-16 text-center">
