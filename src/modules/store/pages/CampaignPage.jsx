@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, TimerOff } from 'lucide-react';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { LoadingSpinner, EmptyState } from '@shared/ui';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, fallbackToOriginalImage } from '@core/api/config.js';
 import { StoreProductCard } from '@modules/store/components/StoreProductCard';
 import NotFoundPage from '@modules/store/pages/NotFoundPage';
 import { storeCampaignsApi } from '@modules/campaigns/api/campaigns.api';
@@ -101,6 +101,7 @@ export default function CampaignPage({ slug: slugProp }) {
             sizes="100vw"
             alt={campaign.name_ar}
             className="absolute inset-0 h-full w-full object-cover object-center"
+            onError={(e) => fallbackToOriginalImage(e, campaign.banner_image)}
             loading="eager"
             decoding="async"
             fetchPriority="high"

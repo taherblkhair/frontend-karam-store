@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CalendarClock } from 'lucide-react';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, fallbackToOriginalImage } from '@core/api/config.js';
 import { campaignPath } from '@modules/campaigns/utils/campaign';
 import { formatCampaignEnd } from '@modules/store/utils/campaignDisplay';
 
@@ -23,6 +23,7 @@ export function HomeHero({ campaign, brand }) {
             className="absolute inset-0 h-full w-full object-cover"
             fetchPriority="high"
             decoding="async"
+            onError={(e) => fallbackToOriginalImage(e, campaign.banner_image)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent sm:bg-gradient-to-l sm:from-black/70 sm:via-black/30" />
           <div className="relative z-10 h-full flex items-end sm:items-center pb-10 sm:pb-0">

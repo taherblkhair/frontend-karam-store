@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, fallbackToOriginalImage } from '@core/api/config.js';
 
 const SWIPE_THRESHOLD_PX = 48;
 const TRANSITION_MS = 500;
@@ -26,6 +26,7 @@ function SlideContent({ banner, priority, asH1 = false }) {
         decoding={priority ? 'sync' : 'async'}
         fetchPriority={priority ? 'high' : 'auto'}
         draggable={false}
+        onError={(e) => fallbackToOriginalImage(e, banner.image)}
       />
       <div
         className={`absolute inset-0 pointer-events-none ${

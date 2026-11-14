@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, fallbackToOriginalImage } from '@core/api/config.js';
 
 function PromoTile({ banner, wide }) {
   const href = banner.link?.trim() || '/products';
@@ -17,6 +17,7 @@ function PromoTile({ banner, wide }) {
         loading="lazy"
         decoding="async"
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+        onError={(e) => fallbackToOriginalImage(e, banner.image)}
       />
       {hasText ? (
         <>

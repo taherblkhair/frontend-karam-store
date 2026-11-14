@@ -8,6 +8,17 @@
   RewriteEngine On
   RewriteBase /
 
+  # One canonical origin: https://karamstore.ly (keeps the query string, e.g. fbclid / utm_*).
+  # http:// and www. otherwise open as a separate origin: no shared cache, cart or Pixel cookies.
+  # AutoSSL / Let's Encrypt validation under /.well-known/ is left alone.
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L,NE]
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
   # Pre-compressed JS/CSS from the Vite build (*.br / *.gz next to each file).
   # Works even when mod_deflate is disabled on the host; mod_mime labels the encoding.
   <IfModule mod_mime.c>

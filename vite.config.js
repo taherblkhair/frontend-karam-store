@@ -57,9 +57,10 @@ function precompressAssets() {
 /**
  * index.html placeholders:
  *   %KARAM_API_BASE%     → API base used by the early-fetch script (`https://api…/api` or `/api`)
+ *   %KARAM_MEDIA_BASE%   → media origin for /uploads (empty = same origin), for the hero preload
  *   <!-- karam:preconnect --> → preconnect hints for the API / media host
  */
-function injectApiHints({ apiBase, origins }) {
+function injectApiHints({ apiBase, mediaBase, origins }) {
   return {
     name: 'karam-api-hints',
     transformIndexHtml(html) {
@@ -72,7 +73,8 @@ function injectApiHints({ apiBase, origins }) {
         .join('\n    ');
       return html
         .replace('<!-- karam:preconnect -->', hints)
-        .replaceAll('%KARAM_API_BASE%', apiBase);
+        .replaceAll('%KARAM_API_BASE%', apiBase)
+        .replaceAll('%KARAM_MEDIA_BASE%', mediaBase);
     },
   };
 }
@@ -96,6 +98,7 @@ export default defineConfig(({ mode }) => {
       react(),
       injectApiHints({
         apiBase: directApi ? `${directApi}/api` : '/api',
+        mediaBase: mediaOrigin,
         origins: [...new Set([directApi, mediaOrigin].filter(Boolean))],
       }),
       precompressAssets(),

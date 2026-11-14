@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { buildResponsiveMedia, mediaVariantUrl } from '@core/api/config.js';
+import { buildResponsiveMedia, mediaVariantUrl, resolveMediaUrl } from '@core/api/config.js';
 
 /**
  * Optimized product/media image:
@@ -22,20 +22,25 @@ export function OptimizedImage({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  // A sized variant that can't load (e.g. not generated yet) falls back once to the original upload
+  const [useOriginal, setUseOriginal] = useState(false);
 
-  const media = buildResponsiveMedia(src, {
+  const responsive = buildResponsiveMedia(src, {
     widths: widths || [400, 800],
     preferSrcWidth,
   });
+  const original = resolveMediaUrl(src);
+  const media = useOriginal || !responsive.srcSet ? { src: useOriginal ? original : responsive.src } : responsive;
   const displaySrc = media.src;
   // Small 400w copy (usually already cached from the product card) shown while the large one loads
-  const previewSrc = priority && media.srcSet ? mediaVariantUrl(src, 400) : '';
+  const previewSrc = priority && media.srcSet && !useOriginal ? mediaVariantUrl(src, 400) : '';
   const showPreview = Boolean(previewSrc) && previewSrc !== displaySrc;
 
   useEffect(() => {
     setLoaded(false);
     setFailed(false);
   }, [displaySrc]);
+  useEffect(() => setUseOriginal(false), [src]);
 
   if (!displaySrc || failed) {
     return (
@@ -84,6 +89,10 @@ export function OptimizedImage({
         draggable={false}
         onLoad={() => setLoaded(true)}
         onError={() => {
+          if (!useOriginal && original && original !== media.src) {
+            setUseOriginal(true);
+            return;
+          }
           setFailed(true);
           setLoaded(true);
         }}

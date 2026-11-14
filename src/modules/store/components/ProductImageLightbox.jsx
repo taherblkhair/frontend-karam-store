@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { buildResponsiveMedia } from '@core/api/config.js';
+import { buildResponsiveMedia, fallbackToOriginalImage } from '@core/api/config.js';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -410,6 +410,7 @@ export function ProductImageLightbox({
             sizes="100vw"
             alt={label}
             draggable={false}
+            onError={(e) => fallbackToOriginalImage(e, slide.image)}
             className={`max-h-[min(92dvh,100%)] max-w-[min(96vw,100%)] object-contain pointer-events-none select-none ${
               slideUnavailable ? 'opacity-60 grayscale-[60%]' : ''
             }`}
@@ -479,6 +480,7 @@ export function ProductImageLightbox({
                   <img
                     src={m.src}
                     alt=""
+                    onError={(e) => fallbackToOriginalImage(e, item.image)}
                     className={`h-full w-full object-cover ${
                       markUnavailable && item.unavailable ? 'opacity-40 grayscale' : ''
                     }`}

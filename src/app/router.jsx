@@ -8,16 +8,9 @@ import { LoadingSpinner } from '@shared/ui';
 import HomePage from '@modules/store/pages/HomePage';
 import StoreProductsPage from '@modules/store/pages/ProductsPage';
 import ProductDetailPage from '@modules/store/pages/ProductDetailPage';
-import BrandsPage from '@modules/store/pages/BrandsPage';
-import BrandPage from '@modules/store/pages/BrandPage';
-import CartPage from '@modules/store/pages/CartPage';
-import CheckoutPage from '@modules/store/pages/CheckoutPage';
 import NotFoundPage from '@modules/store/pages/NotFoundPage';
 import PublicCatchAll from '@modules/store/pages/PublicCatchAll';
 import CampaignPage from '@modules/store/pages/CampaignPage';
-import TrackOrderPage from '@modules/store/pages/TrackOrderPage';
-import WishlistPage from '@modules/store/pages/WishlistPage';
-import PolicyPage from '@modules/store/pages/PolicyPage';
 
 const CHUNK_RELOAD_KEY = 'karam-chunk-reload';
 
@@ -29,12 +22,22 @@ function lazyPage(load) {
   return lazy(() =>
     load().then(
       (module) => {
-        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+        try {
+          sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+        } catch {
+          /* storage blocked (some in-app browsers) */
+        }
         return module;
       },
       (error) => {
-        if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-          sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+        let reloaded = true;
+        try {
+          reloaded = Boolean(sessionStorage.getItem(CHUNK_RELOAD_KEY));
+          if (!reloaded) sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+        } catch {
+          reloaded = true;
+        }
+        if (!reloaded) {
           window.location.reload();
           return new Promise(() => {});
         }
@@ -43,6 +46,47 @@ function lazyPage(load) {
     )
   );
 }
+
+/*
+ * Storefront: the ad landing pages (home, products, product, campaign) stay in the main bundle
+ * so a first visit from an ad renders without an extra round trip. The rest of the store is
+ * split out and fetched while the browser is idle, so it is ready before the shopper taps it.
+ */
+const storeChunks = {
+  cart: () => import('@modules/store/pages/CartPage'),
+  checkout: () => import('@modules/store/pages/CheckoutPage'),
+  brands: () => import('@modules/store/pages/BrandsPage'),
+  brand: () => import('@modules/store/pages/BrandPage'),
+  trackOrder: () => import('@modules/store/pages/TrackOrderPage'),
+  wishlist: () => import('@modules/store/pages/WishlistPage'),
+  policy: () => import('@modules/store/pages/PolicyPage'),
+};
+const CartPage = lazyPage(storeChunks.cart);
+const CheckoutPage = lazyPage(storeChunks.checkout);
+const BrandsPage = lazyPage(storeChunks.brands);
+const BrandPage = lazyPage(storeChunks.brand);
+const TrackOrderPage = lazyPage(storeChunks.trackOrder);
+const WishlistPage = lazyPage(storeChunks.wishlist);
+const PolicyPage = lazyPage(storeChunks.policy);
+
+function prefetchStoreChunks() {
+  if (typeof window === 'undefined') return;
+  if (/^\/(admin|login)(\/|$)/.test(window.location.pathname)) return;
+  const run = () => {
+    // Cart + checkout first: they are the next steps of an order
+    Object.values(storeChunks).forEach((load) => load().catch(() => {}));
+  };
+  const idle = () =>
+    'requestIdleCallback' in window
+      ? window.requestIdleCallback(run, { timeout: 4000 })
+      : run();
+  // A few seconds after load: on a slow in-app connection the page's own images (the LCP)
+  // and the Pixel are still downloading right after `load`; don't compete with them.
+  const later = () => window.setTimeout(idle, 3000);
+  if (document.readyState === 'complete') later();
+  else window.addEventListener('load', later, { once: true });
+}
+prefetchStoreChunks();
 
 const LoginPage = lazyPage(() => import('@modules/auth/pages/LoginPage'));
 const RegisterPage = lazyPage(() => import('@modules/auth/pages/RegisterPage'));

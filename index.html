@@ -107,7 +107,36 @@
         if (/^\/(login|admin)(\/|$)/.test(path)) return;
         get('/store/settings');
         get('/store/campaigns/announcement');
-        if (path === '/') get('/store/home');
+        if (path === '/') {
+          get('/store/home');
+          // Preload the first banner (the home LCP) as soon as /store/home answers, before the
+          // JS bundle has run. Mirrors BannerCarousel: buildResponsiveMedia(…, widths [800, 1200]), sizes 100vw.
+          store['/store/home'].then(function (body) {
+            try {
+              var home = body && body.success === true && body.data;
+              var b = home && home.banners && home.banners[0];
+              var img = b && String(b.image || '').trim();
+              if (!img || /^(data:|blob:)/i.test(img)) return;
+              var media = '%KARAM_MEDIA_BASE%';
+              var abs = /^https?:/i.test(img) ? img : img.indexOf('//') === 0 ? 'https:' + img
+                : media + (img.charAt(0) === '/' ? img : '/' + img);
+              var l = document.createElement('link');
+              l.rel = 'preload';
+              l.as = 'image';
+              l.setAttribute('fetchpriority', 'high');
+              var p = abs.replace(/^https?:\/\/[^/]+/i, '');
+              if (/\/uploads\/images\/[^/]+\.(webp|jpe?g|png)$/i.test(p) && !/-\d+\.webp$/i.test(p)) {
+                var v = function (w) { return abs.replace(/\.(webp|jpe?g|png)$/i, '-' + w + '.webp'); };
+                l.href = v(800);
+                l.setAttribute('imagesrcset', v(800) + ' 800w, ' + v(1200) + ' 1200w, ' + abs + ' 1600w');
+                l.setAttribute('imagesizes', '100vw');
+              } else {
+                l.href = abs;
+              }
+              document.head.appendChild(l);
+            } catch (e) {}
+          });
+        }
         var m = path.match(/^\/product\/([^/]+)$/);
         if (m) {
           var slug = m[1];

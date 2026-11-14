@@ -205,7 +205,14 @@ export default function ProductDetailPage() {
     // and nothing above it moves when the product arrives (was a small spinner → CLS).
     return (
       <StoreLayout>
-        <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-8 pb-32 md:pb-10" role="status" aria-label="جاري تحميل المنتج">
+        {/* Own key: React mounts the product page as new nodes instead of re-using (and moving)
+            these placeholders — on a slow in-app browser that re-use was a 0.5–0.7 layout shift. */}
+        <div
+          key="product-loading"
+          className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-8 pb-32 md:pb-10"
+          role="status"
+          aria-label="جاري تحميل المنتج"
+        >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 lg:gap-12 lg:items-start" aria-hidden>
             <div className="w-full aspect-[4/5] sm:aspect-square max-h-[min(52dvh,560px)] sm:max-h-[min(80vh,640px)] mx-auto rounded-xl sm:rounded-2xl bg-tertiary-200 animate-pulse dark:bg-gray-800" />
             <div className="min-w-0 space-y-4">
@@ -411,7 +418,7 @@ export default function ProductDetailPage() {
   return (
     <StoreLayout>
       {/* Extra bottom space on mobile: sticky CTA + bottom nav */}
-      <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-8 pb-32 md:pb-10">
+      <div key="product" className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-8 pb-32 md:pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 lg:gap-12 lg:items-start">
           {/* Gallery */}
           <div className="min-w-0 -mx-3 sm:mx-0 px-0 sm:px-0">
