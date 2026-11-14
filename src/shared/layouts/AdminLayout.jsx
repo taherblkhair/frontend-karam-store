@@ -4,10 +4,11 @@ import {
   Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, Tag, X,
   BadgePercent,
 } from 'lucide-react';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@core/auth/AuthContext';
 import { useTheme } from '@core/config/ThemeContext';
 import { LoadingSpinner } from '@shared/ui';
+import { useDrawer, drawerMotion } from '@shared/hooks/useDrawer';
 
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'لوحة التحكم', end: true },
@@ -48,29 +49,26 @@ export default function AdminLayout() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Prevent body scroll when mobile drawer is open
-  useEffect(() => {
-    if (!sidebarOpen) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [sidebarOpen]);
+  // Phone / POS drawer: no page scroll behind it, Escape closes, focus in and back
+  const asideRef = useRef(null);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  useDrawer(sidebarOpen, closeSidebar, asideRef);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const closeSidebar = () => setSidebarOpen(false);
-
   return (
     <div className="h-[100dvh] flex overflow-hidden bg-gray-100 dark:bg-gray-900">
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-[min(18rem,85vw)] max-w-full bg-white dark:bg-gray-800 border-l dark:border-gray-700 transform transition-transform duration-200 ease-out flex flex-col safe-pt ${
-          sidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'
-        } ${isPos ? '' : 'lg:translate-x-0 lg:static lg:shadow-none'}`}
+        ref={asideRef}
+        id="admin-sidebar"
+        className={`fixed inset-y-0 right-0 z-50 w-[min(18rem,85vw)] max-w-full bg-white dark:bg-gray-800 border-l dark:border-gray-700 flex flex-col safe-pt ${
+          drawerMotion.panel(sidebarOpen, { standalone: true })
+        } ${sidebarOpen ? 'shadow-2xl' : ''} ${
+          isPos ? '' : 'lg:visible lg:pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:transition-none lg:static lg:shadow-none'
+        }`}
       >
         <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex items-start justify-between gap-2 shrink-0">
           <div className="min-w-0">
@@ -143,13 +141,11 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {sidebarOpen && (
-        <div
-          className={`fixed inset-0 bg-black/50 z-40 backdrop-blur-[1px] ${isPos ? '' : 'lg:hidden'}`}
-          onClick={closeSidebar}
-          aria-hidden
-        />
-      )}
+      <div
+        className={`fixed inset-0 bg-black/50 z-40 backdrop-blur-[1px] ${drawerMotion.overlay(sidebarOpen, { standalone: true })} ${isPos ? '' : 'lg:hidden'}`}
+        onClick={closeSidebar}
+        aria-hidden
+      />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full">
         <header className="h-14 sm:h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between gap-3 px-3 sm:px-6 z-30 shrink-0 safe-pt">
@@ -158,6 +154,8 @@ export default function AdminLayout() {
             className={`p-2 -mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${isPos ? '' : 'lg:hidden'}`}
             onClick={() => setSidebarOpen(true)}
             aria-label="فتح القائمة"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
           >
             <Menu size={22} />
           </button>

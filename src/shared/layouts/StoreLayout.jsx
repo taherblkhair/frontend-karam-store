@@ -17,6 +17,7 @@ import { useWishlist } from '@modules/store/hooks/useWishlist';
 import { brandFromSettings } from '@modules/store/utils/brand';
 import { POLICY_PAGES } from '@modules/store/utils/policies';
 import { toWhatsAppNumber } from '@shared/utils/phone';
+import { useDrawer, drawerMotion } from '@shared/hooks/useDrawer';
 
 const NAV_LINKS = [
   { to: '/', label: 'الرئيسية', end: true },
@@ -57,30 +58,20 @@ function useStoreCategories() {
 
 function MobileMenu({ open, onClose, brand, categories, accountTo, accountLabel, dark, toggleTheme, policies }) {
   const panelRef = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    panelRef.current?.querySelector('a,button')?.focus();
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open, onClose]);
+  useDrawer(open, onClose, panelRef);
 
-  if (!open) return null;
+  // Always mounted so it can slide out; hidden (no clicks / focus) once closed.
   const linkClass = 'flex items-center justify-between rounded-xl px-3 py-3 text-base font-medium hover:bg-tertiary-100 dark:hover:bg-gray-800';
   return (
-    <div className="fixed inset-0 z-[60] lg:hidden">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+    <div className={`fixed inset-0 z-[60] overflow-hidden lg:hidden ${drawerMotion.root(open)}`}>
+      <div className={`absolute inset-0 bg-black/40 ${drawerMotion.overlay(open)}`} onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
+        id="store-menu"
         role="dialog"
         aria-modal="true"
         aria-label="قائمة المتجر"
-        className="absolute inset-y-0 right-0 flex w-[86%] max-w-sm flex-col bg-white shadow-xl dark:bg-gray-900"
+        className={`absolute inset-y-0 right-0 flex w-[86%] max-w-sm flex-col bg-white shadow-xl dark:bg-gray-900 ${drawerMotion.panel(open)}`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-ink-100 px-4 py-3 dark:border-gray-700">
           <BrandMark brand={brand} />
@@ -169,7 +160,7 @@ export default function StoreLayout({ children }) {
         <CampaignAnnouncementBar />
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-3 lg:gap-6">
-            <button type="button" onClick={() => setMenuOpen(true)} className={`${iconButton} lg:hidden -mr-2`} aria-label="فتح القائمة" aria-expanded={menuOpen}>
+            <button type="button" onClick={() => setMenuOpen(true)} className={`${iconButton} lg:hidden -mr-2`} aria-label="فتح القائمة" aria-expanded={menuOpen} aria-controls="store-menu">
               <Menu size={22} />
             </button>
 
