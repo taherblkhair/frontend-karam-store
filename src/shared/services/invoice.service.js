@@ -1,5 +1,6 @@
 import { ORDER_STATUS, formatPrice } from '@core/constants';
 import { resolveMediaUrl } from '@core/api/config.js';
+import { packagingLabel } from '@shared/utils/packaging';
 
 function itemVariantLabel(item) {
   if (item.color_name || item.size_name) {
@@ -17,6 +18,7 @@ export function printOrderInvoice(order, storeName = 'متجر كرم') {
     .filter((item) => Number(item.quantity) > 0)
     .map((item) => {
       const variant = itemVariantLabel(item);
+      const packaging = packagingLabel(item.packaging_type);
       const img = item.image ? resolveMediaUrl(item.image) : '';
       return `
       <tr>
@@ -30,6 +32,7 @@ export function printOrderInvoice(order, storeName = 'متجر كرم') {
             <div>
               <div style="font-weight:700">${item.product_name || ''}</div>
               ${variant ? `<div style="color:#004D40;font-size:13px;margin-top:2px">${variant}</div>` : ''}
+              ${packaging ? `<div style="color:#444;font-size:12px;margin-top:2px">التغليف: ${packaging}</div>` : ''}
               ${item.sku ? `<div style="color:#666;font-size:12px;margin-top:2px">SKU: ${item.sku}</div>` : ''}
               ${item.variant_id ? `<div style="color:#999;font-size:11px">نسخة #${item.variant_id}</div>` : ''}
             </div>

@@ -36,6 +36,7 @@ import {
 import { printOrderInvoice } from '@shared/services/invoice.service';
 import { useAuth } from '@core/auth/AuthContext';
 import { resolveMediaUrl } from '@core/api/config.js';
+import { packagingLabel } from '@shared/utils/packaging';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -225,7 +226,7 @@ export default function OrderDetailPage() {
                         <span className="font-bold text-ink-800 dark:text-gray-100">{item.product_name}</span>
                         {item.item_status && <ItemStatusBadge status={item.item_status} />}
                       </div>
-                      {(item.variant_info || item.color_name || item.size_name || item.variant_id) && (
+                      {(item.variant_info || item.color_name || item.size_name || item.variant_id || packagingLabel(item.packaging_type)) && (
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {item.color_name && (
                             <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
@@ -240,6 +241,11 @@ export default function OrderDetailPage() {
                           {!item.color_name && !item.size_name && item.variant_info && (
                             <span className="inline-flex items-center rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 px-2.5 py-0.5 text-xs font-semibold">
                               {item.variant_info}
+                            </span>
+                          )}
+                          {packagingLabel(item.packaging_type) && (
+                            <span className="inline-flex items-center rounded-full bg-tertiary-100 text-ink-700 dark:bg-gray-700 dark:text-gray-200 px-2.5 py-0.5 text-xs font-semibold">
+                              التغليف: {packagingLabel(item.packaging_type)}
                             </span>
                           )}
                           {item.variant_id && (

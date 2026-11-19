@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Minus, Plus, Link2, Check, Zap, Flame, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Link2, Check, Zap, Flame, MessageCircle, Package } from 'lucide-react';
+import { packagingLabel } from '@shared/utils/packaging';
 import { storeSettingsQuery } from '@modules/store/api/storeSettings.query';
 import { toWhatsAppNumber } from '@shared/utils/phone';
 import { CampaignCountdown } from '@modules/campaigns/components/CampaignCountdown';
@@ -516,6 +517,19 @@ export default function ProductDetailPage() {
                 />
                 {variantSoldOut ? variantSoldOutText : outOfStock ? 'غير متوفر حاليًا' : 'متوفر الآن'}
               </p>
+
+              {/* What comes with the item — information, not an option to pick */}
+              {packagingLabel(product.packaging_type) ? (
+                <p className="mt-2 flex items-center gap-2 text-sm text-ink-600 dark:text-gray-300">
+                  <Package size={16} className="shrink-0 text-ink-400 dark:text-gray-400" aria-hidden />
+                  <span>
+                    التغليف:{' '}
+                    <strong className="font-semibold text-ink-800 dark:text-gray-100">
+                      {packagingLabel(product.packaging_type)}
+                    </strong>
+                  </span>
+                </p>
+              ) : null}
             </div>
 
             <div

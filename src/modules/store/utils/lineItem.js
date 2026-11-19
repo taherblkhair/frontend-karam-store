@@ -51,6 +51,8 @@ export function buildLineItem(product, variant = null, quantity = 1) {
     price,
     compare_price: parseFloat(variant?.compare_price || product.compare_price || 0),
     image,
+    // Description only (never priced); the order stores its own server-side snapshot
+    packaging_type: product.packaging_type || null,
     quantity: qty,
     stock,
   };

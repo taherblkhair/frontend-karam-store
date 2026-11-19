@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Heart, Minus, Plus, ShoppingCart, X } from 'lucide-react';
+import { Heart, Minus, Plus, Package, ShoppingCart, X } from 'lucide-react';
+import { packagingLabel } from '@shared/utils/packaging';
 import { OptimizedImage } from '@shared/components/OptimizedImage';
 import { notifyError, notifySuccess } from '@shared/services/toast.service';
 import { useCart } from '@modules/store/context/CartContext';
@@ -214,6 +215,12 @@ export function QuickBuyModal({ product, open, onClose, isSaved, onToggleWishlis
                     : 'غير متوفر حاليًا'
                   : selectionText || (untyped && selected ? selected.sku || 'الخيار المحدد' : 'اختر الخيار المناسب')}
               </p>
+              {packagingLabel(product.packaging_type) ? (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-500 dark:text-gray-300">
+                  <Package size={14} className="shrink-0" aria-hidden />
+                  التغليف: <span className="font-semibold text-ink-700 dark:text-gray-100">{packagingLabel(product.packaging_type)}</span>
+                </p>
+              ) : null}
             </div>
           </div>
 

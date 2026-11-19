@@ -20,6 +20,7 @@ import { useConfirm } from '@shared/hooks/useConfirm';
 import { storeApi } from '@modules/store/api/store.api';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { notifySuccess } from '@shared/services/toast.service';
+import { packagingLabel } from '@shared/utils/packaging';
 
 const itemsLabel = (n) => (n === 1 ? 'قطعة واحدة' : n === 2 ? 'قطعتان' : n <= 10 ? `${n} قطع` : `${n} قطعة`);
 
@@ -124,7 +125,9 @@ function CartItem({ item, onQuantity, onRemove }) {
   const variantParts = [
     item.color_name && { label: 'اللون', value: item.color_name },
     item.size_name && { label: 'المقاس', value: item.size_name },
+    packagingLabel(item.packaging_type) && { label: 'التغليف', value: packagingLabel(item.packaging_type) },
   ].filter(Boolean);
+  const showVariantInfo = !item.color_name && !item.size_name && item.variant_info;
   const hasCompare = item.compare_price > item.price;
   const unavailable = !(item.stock > 0);
   const atMax = !unavailable && item.quantity >= item.stock;
@@ -156,9 +159,8 @@ function CartItem({ item, onQuantity, onRemove }) {
                   </span>
                 ))}
               </div>
-            ) : item.variant_info ? (
-              <p className="mt-1 text-xs text-ink-500">{item.variant_info}</p>
             ) : null}
+            {showVariantInfo ? <p className="mt-1 text-xs text-ink-500">{item.variant_info}</p> : null}
           </div>
           <button
             type="button"

@@ -30,6 +30,7 @@ import { resolveQuickFill } from '@modules/store/utils/quickFill';
 import { trackOrderPath, trackOrderWhatsAppShareUrl } from '@modules/store/utils/trackOrder';
 import { CopyButton } from '@modules/store/components/CopyButton';
 import { BankTransferModal } from '@modules/store/components/BankTransferModal';
+import { packagingLabel } from '@shared/utils/packaging';
 
 const BANK_FIELDS = ['bank_account_id', 'transfer_amount', 'receipt'];
 
@@ -91,12 +92,13 @@ function RequiredMark() {
 }
 
 function itemVariantLabel(item) {
-  return (
+  const variant =
     item.variant_info ||
     [item.color_name && `اللون: ${item.color_name}`, item.size_name && `المقاس: ${item.size_name}`]
       .filter(Boolean)
-      .join(' · ')
-  );
+      .join(' · ');
+  const packaging = packagingLabel(item.packaging_type);
+  return [variant, packaging && `التغليف: ${packaging}`].filter(Boolean).join(' · ');
 }
 
 function formatOrderSummaryText(order) {
@@ -673,6 +675,9 @@ export default function CheckoutPage() {
                               .filter(Boolean)
                               .join(' · ')}
                         </p>
+                      )}
+                      {packagingLabel(item.packaging_type) && (
+                        <p className="text-[11px] text-ink-500 mt-0.5">التغليف: {packagingLabel(item.packaging_type)}</p>
                       )}
                       {item.sku && (
                         <p className="text-[11px] text-ink-400 mt-0.5">SKU: {item.sku}</p>

@@ -32,6 +32,7 @@ import {
   trackOrderAbsoluteUrl,
   trackOrderWhatsAppShareUrl,
 } from '@modules/store/utils/trackOrder';
+import { packagingLabel } from '@shared/utils/packaging';
 
 const STEP_ICONS = [ClipboardCheck, PackageSearch, Truck, PackageCheck];
 
@@ -184,6 +185,9 @@ function TrackingResult({ result, storeName, storeWhatsapp }) {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold line-clamp-2">{item.product_name}</p>
                 {item.variant_info ? <p className="text-xs font-medium text-primary-600 mt-0.5">{item.variant_info}</p> : null}
+                {packagingLabel(item.packaging_type) ? (
+                  <p className="text-xs text-ink-500 mt-0.5">التغليف: {packagingLabel(item.packaging_type)}</p>
+                ) : null}
                 <p className="text-ink-500 mt-0.5">
                   الكمية: {item.quantity}
                   {item.item_status === 'cancelled' ? ' · ملغي' : item.item_status === 'returned' ? ' · مرتجع' : ''}

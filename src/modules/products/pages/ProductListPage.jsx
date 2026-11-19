@@ -19,6 +19,7 @@ import { TableScroll } from '@shared/components/TableScroll';
 import { ImagePreview } from '@shared/components/ImageUpload';
 import { ProductForm } from '@modules/products/forms/ProductForm';
 import { formatPrice } from '@core/constants';
+import { packagingLabel } from '@shared/utils/packaging';
 
 function statusBadge(status) {
   return (
@@ -168,6 +169,10 @@ export default function AdminProductsPage() {
                       <dt className="text-gray-400">الحالة</dt>
                       <dd className="mt-0.5">{statusBadge(p.status)}</dd>
                     </div>
+                    <div>
+                      <dt className="text-gray-400">التغليف</dt>
+                      <dd className="font-medium">{packagingLabel(p.packaging_type) || '—'}</dd>
+                    </div>
                   </dl>
                 </div>
               </article>
@@ -185,6 +190,7 @@ export default function AdminProductsPage() {
                     <th>SKU</th>
                     <th>السعر</th>
                     <th>المخزون</th>
+                    <th>التغليف</th>
                     <th>الحالة</th>
                     <th>إجراءات</th>
                   </tr>
@@ -202,6 +208,7 @@ export default function AdminProductsPage() {
                       <td className="whitespace-nowrap">{p.sku || '—'}</td>
                       <td className="whitespace-nowrap">{formatPrice(p.price)}</td>
                       <td>{p.total_stock}</td>
+                      <td className="whitespace-nowrap">{packagingLabel(p.packaging_type) || '—'}</td>
                       <td>{statusBadge(p.status)}</td>
                       <td>
                         <ProductActions product={p} onEdit={openEdit} onDelete={handleDelete} />

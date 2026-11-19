@@ -6,6 +6,7 @@ import { FieldError, FormAlert } from '@shared/ui';
 import { notifyError, notifySuccess } from '@shared/services/toast.service';
 import { productsApi } from '@modules/products/api/products.api';
 import { productKeys } from '@modules/products/hooks/useProducts';
+import { DEFAULT_PACKAGING_TYPE, PACKAGING_OPTIONS } from '@shared/utils/packaging';
 
 const emptyVariant = () => ({
   color_id: '',
@@ -45,6 +46,7 @@ const defaultForm = {
   brand_id: '',
   stock: '',
   status: 'active',
+  packaging_type: DEFAULT_PACKAGING_TYPE,
   is_featured: false,
   is_new: false,
   has_variants: false,
@@ -134,6 +136,7 @@ export function ProductForm({
         brand_id: initial.brand_id || '',
         stock: initial.total_stock ?? '',
         status: initial.status || 'active',
+        packaging_type: initial.packaging_type || DEFAULT_PACKAGING_TYPE,
         is_featured: !!initial.is_featured,
         is_new: !!initial.is_new,
         has_variants: !!initial.has_variants,
@@ -315,6 +318,7 @@ export function ProductForm({
       category_id: form.category_id ? parseInt(form.category_id, 10) : null,
       brand_id: form.brand_id ? parseInt(form.brand_id, 10) : null,
       status: form.status,
+      packaging_type: form.packaging_type,
       is_featured: form.is_featured,
       is_new: form.is_new,
       has_variants: form.has_variants,
@@ -537,6 +541,23 @@ export function ProductForm({
         <option value="draft">مسودة</option>
         <option value="archived">مؤرشف</option>
       </select>
+
+      <div>
+        <label htmlFor="product-packaging-type" className="block text-sm font-medium mb-1">
+          نوع التغليف
+        </label>
+        <select
+          id="product-packaging-type"
+          className="input"
+          value={form.packaging_type}
+          onChange={(e) => setForm({ ...form, packaging_type: e.target.value })}
+        >
+          {PACKAGING_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <FieldError message={getFieldError('packaging_type')} />
+      </div>
 
       {!form.has_variants ? (
         <div>
