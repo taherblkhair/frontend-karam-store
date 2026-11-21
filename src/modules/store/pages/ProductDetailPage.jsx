@@ -12,6 +12,7 @@ import { storeApi } from '@modules/store/api/store.api';
 import StoreLayout from '@shared/layouts/StoreLayout';
 import { ProductImageGallery } from '@modules/store/components/ProductImageGallery';
 import { ProductDetailAccordions } from '@modules/store/components/ProductDetailAccordions';
+import { ProductShippingLine } from '@modules/store/components/ShippingEstimate';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { RecentlyViewedSection } from '@modules/store/components/RecentlyViewedSection';
 import { recordRecentlyViewed } from '@modules/store/hooks/useRecentlyViewed';
@@ -530,6 +531,8 @@ export default function ProductDetailPage() {
                   </span>
                 </p>
               ) : null}
+
+              <ProductShippingLine />
             </div>
 
             <div

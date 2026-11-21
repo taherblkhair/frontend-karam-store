@@ -15,6 +15,9 @@ export function normalizeArabic(text) {
 /**
  * Dropdown with an instant search box on top.
  * options: [{ value, label, hint? }] — value is compared as string.
+ *
+ * variant="inline": the trigger is a link-style word inside a sentence, and the list opens under
+ * the nearest positioned ancestor (give the surrounding row `relative`) so it spans that row.
  */
 export const SearchableSelect = forwardRef(function SearchableSelect(
   {
@@ -27,6 +30,8 @@ export const SearchableSelect = forwardRef(function SearchableSelect(
     disabled = false,
     invalid = false,
     describedBy,
+    variant = 'input',
+    ariaLabel,
   },
   ref
 ) {
@@ -34,6 +39,8 @@ export const SearchableSelect = forwardRef(function SearchableSelect(
   const rootRef = useRef(null);
   const searchRef = useRef(null);
   const listRef = useRef(null);
+  const dropRef = useRef(null);
+  const inline = variant === 'inline';
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -62,7 +69,8 @@ export const SearchableSelect = forwardRef(function SearchableSelect(
     setHighlight(Math.max(0, idx));
     // preventScroll: on phones the page jump is handled by scrollIntoView below
     searchRef.current?.focus({ preventScroll: true });
-    rootRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // inline: bring the whole list into view (it may open near the sticky bottom bars)
+    (inline ? dropRef : rootRef).current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -96,7 +104,7 @@ export const SearchableSelect = forwardRef(function SearchableSelect(
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={inline ? 'inline-block min-w-0' : 'relative'}>
       <button
         ref={ref}
         type="button"
@@ -106,22 +114,30 @@ export const SearchableSelect = forwardRef(function SearchableSelect(
         aria-expanded={open}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
-        className={`input flex items-center justify-between gap-2 text-start disabled:opacity-60 disabled:cursor-not-allowed ${
-          invalid ? '!border-red-400 ring-2 ring-red-200 dark:ring-red-900/40' : ''
-        }`}
+        aria-label={ariaLabel ? `${ariaLabel}: ${selected ? selected.label : placeholder}` : undefined}
+        className={
+          inline
+            ? 'inline-flex max-w-[11rem] items-center gap-1 rounded-md font-semibold text-primary-700 underline decoration-dotted decoration-1 underline-offset-4 hover:text-primary-800 disabled:cursor-wait disabled:opacity-60 dark:text-primary-300'
+            : `input flex items-center justify-between gap-2 text-start disabled:opacity-60 disabled:cursor-not-allowed ${
+                invalid ? '!border-red-400 ring-2 ring-red-200 dark:ring-red-900/40' : ''
+              }`
+        }
       >
-        <span className={`truncate ${selected ? '' : 'text-ink-400'}`}>
+        <span className={`truncate ${selected || inline ? '' : 'text-ink-400'}`}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
-          size={18}
+          size={inline ? 15 : 18}
           className={`shrink-0 text-ink-400 transition-transform ${open ? 'rotate-180' : ''}`}
           aria-hidden
         />
       </button>
 
       {open && (
-        <div className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-ink-100 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+        <div
+          ref={dropRef}
+          className="absolute inset-x-0 top-full z-30 mt-1.5 scroll-mb-40 scroll-mt-20 overflow-hidden rounded-xl border border-ink-100 bg-white text-start shadow-lg md:scroll-mb-6 dark:border-gray-700 dark:bg-gray-800"
+        >
           <div className="relative border-b border-ink-100 p-2 dark:border-gray-700">
             <Search
               size={16}

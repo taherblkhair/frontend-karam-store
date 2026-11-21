@@ -31,6 +31,7 @@ import { trackOrderPath, trackOrderWhatsAppShareUrl } from '@modules/store/utils
 import { CopyButton } from '@modules/store/components/CopyButton';
 import { BankTransferModal } from '@modules/store/components/BankTransferModal';
 import { packagingLabel } from '@shared/utils/packaging';
+import { rememberShippingCity, savedShippingCityId } from '@modules/store/hooks/useShippingCity';
 
 const BANK_FIELDS = ['bank_account_id', 'transfer_amount', 'receipt'];
 
@@ -161,13 +162,15 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({
     customer_name: '',
     customer_phone: '',
-    city_id: '',
+    // City picked on the product page / cart (a saved account address still takes over below)
+    city_id: savedShippingCityId(),
     area_id: '',
     address: '',
     notes: '',
     password: '',
   });
   const [shippingCost, setShippingCost] = useState(0);
+  const [shippingError, setShippingError] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [bankOpen, setBankOpen] = useState(false);
   const [addressPrefillDone, setAddressPrefillDone] = useState(false);
@@ -231,12 +234,22 @@ export default function CheckoutPage() {
   }, [user, refreshProfile, addressPrefillDone]);
 
   useEffect(() => {
-    if (form.city_id) {
-      storeApi
-        .shippingCost({ city_id: form.city_id, area_id: form.area_id || undefined })
-        .then((res) => setShippingCost(res.data.shipping_cost))
-        .catch(() => setShippingCost(15));
-    }
+    if (!form.city_id) return undefined;
+    rememberShippingCity(form.city_id);
+    let cancelled = false;
+    setShippingError(false);
+    storeApi
+      .shippingCost({ city_id: form.city_id, area_id: form.area_id || undefined })
+      .then((res) => {
+        if (!cancelled) setShippingCost(Number(res.data.shipping_cost) || 0);
+      })
+      .catch(() => {
+        // No guessed price: the order is priced by the server anyway
+        if (!cancelled) setShippingError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [form.city_id, form.area_id]);
 
   const orderMutation = useMutation({
@@ -376,6 +389,11 @@ export default function CheckoutPage() {
     setClientError(null);
 
     if (paymentMethod === 'bank_transfer') {
+      // The transfer amount must include delivery — never open it with an unknown shipping price
+      if (!shippingKnown) {
+        notifyError({ message: 'تعذّر حساب سعر التوصيل، تحقق من الاتصال وأعد المحاولة' });
+        return;
+      }
       setBankOpen(true);
       return;
     }
@@ -456,7 +474,8 @@ export default function CheckoutPage() {
   }));
   const areaOptions = areas.map((a) => ({ value: a.id, label: a.name_ar }));
 
-  const total = subtotal + shippingCost;
+  const shippingKnown = Boolean(form.city_id) && !shippingError;
+  const total = subtotal + (shippingKnown ? shippingCost : 0);
   const hasSavedAddress = Boolean(user?.shipping_address?.address || user?.shipping_address?.city_id);
 
   return (
@@ -697,7 +716,13 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>الشحن</span>
-                  <span>{formatPrice(shippingCost)}</span>
+                  {shippingKnown ? (
+                    <span>{formatPrice(shippingCost)}</span>
+                  ) : (
+                    <span className="text-sm text-ink-400">
+                      {form.city_id ? 'تعذّر حسابه — يُحسب عند تأكيد الطلب' : 'اختر المدينة'}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>الإجمالي</span>

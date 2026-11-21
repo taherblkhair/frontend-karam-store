@@ -83,6 +83,7 @@ function MobileMenu({ open, onClose, brand, categories, accountTo, accountLabel,
           {NAV_LINKS.map((l) => (
             <Link key={l.to} to={l.to} onClick={onClose} className={linkClass}>{l.label}</Link>
           ))}
+          <Link to="/shipping" onClick={onClose} className={linkClass}>أسعار التوصيل</Link>
           <Link to="/wishlist" onClick={onClose} className={linkClass}>المفضلة</Link>
           <Link to={accountTo} onClick={onClose} className={linkClass}>{accountLabel}</Link>
           {categories.length ? (
@@ -250,6 +251,7 @@ export default function StoreLayout({ children }) {
               <h2 id="footer-help" className="text-white font-semibold mb-4">خدمة العملاء</h2>
               <ul className="space-y-2.5 text-sm">
                 <li><Link to="/track-order" className="hover:text-white">تتبع الطلب</Link></li>
+                <li><Link to="/shipping" className="hover:text-white">أسعار التوصيل</Link></li>
                 {policies.map((p) => (
                   <li key={p.slug}><Link to={p.path} className="hover:text-white">{p.title}</Link></li>
                 ))}

@@ -1,17 +1,20 @@
 import { useId, useState } from 'react';
 import { ChevronDown, Package, SearchCheck } from 'lucide-react';
 
+/** Delivery times — also shown on the shipping prices page (one copy of the text). */
+export const DELIVERY_NOTES = [
+  'توصيل فوري داخل مدينة طرابلس.',
+  'مدن المنطقة الوسطى والغربية: خلال يومين.',
+  'المناطق والمدن الشرقية والجنوبية: خلال 3 أيام.',
+  'يتم التواصل مع العميل لتأكيد تفاصيل الطلب وموعد التوصيل.',
+];
+
 const SECTIONS = [
   {
     id: 'delivery',
     title: 'تفاصيل التوصيل',
     icon: Package,
-    items: [
-      'توصيل فوري داخل مدينة طرابلس.',
-      'مدن المنطقة الوسطى والغربية: خلال يومين.',
-      'المناطق والمدن الشرقية والجنوبية: خلال 3 أيام.',
-      'يتم التواصل مع العميل لتأكيد تفاصيل الطلب وموعد التوصيل.',
-    ],
+    items: DELIVERY_NOTES,
   },
   {
     id: 'inspection',

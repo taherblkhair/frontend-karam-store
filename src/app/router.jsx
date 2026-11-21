@@ -60,6 +60,7 @@ const storeChunks = {
   trackOrder: () => import('@modules/store/pages/TrackOrderPage'),
   wishlist: () => import('@modules/store/pages/WishlistPage'),
   policy: () => import('@modules/store/pages/PolicyPage'),
+  shipping: () => import('@modules/store/pages/ShippingPricesPage'),
 };
 const CartPage = lazyPage(storeChunks.cart);
 const CheckoutPage = lazyPage(storeChunks.checkout);
@@ -68,6 +69,7 @@ const BrandPage = lazyPage(storeChunks.brand);
 const TrackOrderPage = lazyPage(storeChunks.trackOrder);
 const WishlistPage = lazyPage(storeChunks.wishlist);
 const PolicyPage = lazyPage(storeChunks.policy);
+const ShippingPricesPage = lazyPage(storeChunks.shipping);
 
 function prefetchStoreChunks() {
   if (typeof window === 'undefined') return;
@@ -152,6 +154,7 @@ export function AppRouter() {
             <Route path="/track-order" element={<TrackOrderPage />} />
             <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/pages/:slug" element={<PolicyPage />} />
+            <Route path="/shipping" element={<ShippingPricesPage />} />
             <Route element={<GuestRoute />}>
               <Route path="/register" element={<RegisterPage />} />
             </Route>

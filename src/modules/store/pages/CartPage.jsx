@@ -21,6 +21,8 @@ import { storeApi } from '@modules/store/api/store.api';
 import { StoreProductSection } from '@modules/store/components/StoreProductCard';
 import { notifySuccess } from '@shared/services/toast.service';
 import { packagingLabel } from '@shared/utils/packaging';
+import { ShippingCityPicker } from '@modules/store/components/ShippingEstimate';
+import { useShippingCity } from '@modules/store/hooks/useShippingCity';
 
 const itemsLabel = (n) => (n === 1 ? 'قطعة واحدة' : n === 2 ? 'قطعتان' : n <= 10 ? `${n} قطع` : `${n} قطعة`);
 
@@ -197,6 +199,10 @@ function CartItem({ item, onQuantity, onRemove }) {
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, subtotal, itemCount, refreshPrices } = useCart();
   const confirm = useConfirm();
+  const shipping = useShippingCity();
+  // Same city price the order is charged; total only includes it once a city is chosen
+  const shippingPrice = shipping.price;
+  const total = subtotal + (shippingPrice ?? 0);
 
   // Campaign prices may have started / ended since items were added
   useEffect(() => {
@@ -294,13 +300,33 @@ export default function CartPage() {
                   <dd className="font-semibold tabular-nums text-primary-600">− {formatPrice(savings)}</dd>
                 </div>
               )}
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-500 dark:text-gray-400">التوصيل</dt>
-                <dd className="text-ink-500 dark:text-gray-400">يُحسب عند إتمام الطلب</dd>
-              </div>
+              {shipping.isError ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-500 dark:text-gray-400">التوصيل</dt>
+                  <dd className="text-ink-500 dark:text-gray-400">يُحسب عند إتمام الطلب</dd>
+                </div>
+              ) : (
+                <div className="relative flex items-baseline justify-between gap-3">
+                  <dt className="min-w-0 text-ink-500 dark:text-gray-400">
+                    التوصيل إلى{' '}
+                    <ShippingCityPicker
+                      cities={shipping.cities}
+                      cityId={shipping.cityId}
+                      onChange={shipping.setCityId}
+                      disabled={shipping.isLoading}
+                    />
+                  </dt>
+                  <dd className={shippingPrice != null ? 'font-semibold tabular-nums text-ink-800 dark:text-gray-100' : 'text-xs text-ink-400'}>
+                    {shippingPrice != null ? formatPrice(shippingPrice) : 'اختر مدينتك'}
+                  </dd>
+                </div>
+              )}
               <div className="flex items-baseline justify-between gap-3 border-t border-ink-100 pt-4 dark:border-gray-700">
-                <dt className="text-base font-bold text-ink-800 dark:text-gray-100">الإجمالي</dt>
-                <dd className="text-2xl font-extrabold tabular-nums text-primary-600 dark:text-primary-300">{formatPrice(subtotal)}</dd>
+                <dt className="text-base font-bold text-ink-800 dark:text-gray-100">
+                  الإجمالي
+                  {shippingPrice != null ? <span className="block text-xs font-normal text-ink-400">شامل التوصيل</span> : null}
+                </dt>
+                <dd className="text-2xl font-extrabold tabular-nums text-primary-600 dark:text-primary-300">{formatPrice(total)}</dd>
               </div>
             </dl>
 
@@ -313,7 +339,10 @@ export default function CartPage() {
               </li>
               <li className="flex items-center gap-2">
                 <Truck size={16} className="shrink-0 text-primary-600" />
-                رسوم التوصيل تُحدد حسب منطقتك عند إتمام الطلب
+                <span>
+                  سعر التوصيل حسب مدينتك —{' '}
+                  <Link to="/shipping" className="font-medium text-primary-600 hover:underline underline-offset-2">كل الأسعار</Link>
+                </span>
               </li>
             </ul>
           </aside>
@@ -327,8 +356,10 @@ export default function CartPage() {
       >
         <div className="container mx-auto flex items-center gap-3 px-4 py-2.5">
           <div className="shrink-0 leading-tight">
-            <p className="text-[11px] text-ink-400">الإجمالي · {itemsLabel(itemCount)}</p>
-            <p className="text-lg font-extrabold tabular-nums text-primary-600 dark:text-primary-300">{formatPrice(subtotal)}</p>
+            <p className="text-[11px] text-ink-400">
+              {shippingPrice != null ? 'شامل التوصيل' : 'الإجمالي'} · {itemsLabel(itemCount)}
+            </p>
+            <p className="text-lg font-extrabold tabular-nums text-primary-600 dark:text-primary-300">{formatPrice(total)}</p>
           </div>
           {checkoutButton('h-12 flex-1 text-base')}
         </div>
