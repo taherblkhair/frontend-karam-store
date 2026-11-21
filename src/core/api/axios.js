@@ -67,7 +67,10 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        const next = `${window.location.pathname}${window.location.search}`;
+        window.location.href = next.startsWith('/admin') || next.startsWith('/account')
+          ? `/login?next=${encodeURIComponent(next)}`
+          : '/login';
       }
     }
 

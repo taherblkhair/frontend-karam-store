@@ -29,6 +29,13 @@ export const endpoints = {
   settings: '/settings',
   cities: '/cities',
   shippingRates: '/shipping-rates',
+  push: {
+    config: '/notifications/push/config',
+    subscriptions: '/notifications/push/subscriptions',
+    remove: '/notifications/push/subscriptions/remove',
+    test: '/notifications/push/test',
+    logs: '/notifications/push/logs',
+  },
   pos: {
     sale: '/pos/sale',
     recentOrders: '/pos/recent-orders',

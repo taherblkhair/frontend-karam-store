@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@core/auth/AuthContext';
+import { afterLoginPath } from '@core/auth/ProtectedRoute';
 import { useFormErrors } from '@shared/hooks/useFormErrors';
 import { FieldError, FormAlert } from '@shared/ui';
 import { notifySuccess, notifyError } from '@shared/services/toast.service';
@@ -14,6 +15,7 @@ import {
 export default function LoginPage() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ email: '', phone: '', password: '' });
   // Store customers use phone; staff can switch to email
   const [usePhone, setUsePhone] = useState(true);
@@ -41,8 +43,7 @@ export default function LoginPage() {
       if (!nextUser) {
         throw { message: 'فشل تسجيل الدخول: لم يُرجع الخادم بيانات المستخدم' };
       }
-      if (nextUser.role === 'customer') navigate('/account');
-      else navigate('/admin');
+      navigate(afterLoginPath(nextUser.role, searchParams.get('next')), { replace: true });
     } catch (err) {
       applyApiError(err);
       notifyError(err);

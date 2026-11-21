@@ -63,6 +63,7 @@ Options -Indexes
   AddType image/avif .avif
   AddType text/javascript .js
   AddType text/css .css
+  AddType application/manifest+json .webmanifest
   RemoveType .gz .br
   AddEncoding gzip .gz
   AddEncoding br .br
@@ -85,6 +86,10 @@ Options -Indexes
 # points at hashed bundles removed by a newer deploy (blank page). Hashed assets are immutable.
 <IfModule mod_headers.c>
   <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  # Service worker + app manifests: always revalidated so updates reach installed apps
+  <FilesMatch "^(sw\.js|manifest\.webmanifest|admin\.webmanifest)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css)(\.(gz|br))?$">

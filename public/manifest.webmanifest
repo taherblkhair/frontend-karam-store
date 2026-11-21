@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Karam Bags | كرم للحقائب",
+  "short_name": "كرم للحقائب",
+  "description": "حقائب وأحذية نسائية في ليبيا — توصيل لكل المدن والدفع عند الاستلام.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#004D40",
+  "theme_color": "#004D40",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

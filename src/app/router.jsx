@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ProtectedRoute, GuestRoute } from '@core/auth/ProtectedRoute';
 import StoreAccessGate from '@modules/store/components/StoreAccessGate';
 import { ScrollToTop } from '@shared/components/ScrollToTop';
@@ -119,6 +119,7 @@ const StockAvailabilityReportPage = lazyPage(() =>
 const SettingsPage = lazyPage(() => import('@modules/settings/pages/SettingsPage'));
 const UsersPage = lazyPage(() => import('@modules/users/pages/UsersPage'));
 const POSPage = lazyPage(() => import('@modules/sales/pages/POSPage'));
+const NotificationsPage = lazyPage(() => import('@modules/notifications/pages/NotificationsPage'));
 
 function PageFallback() {
   return (
@@ -126,6 +127,24 @@ function PageFallback() {
       <LoadingSpinner />
     </div>
   );
+}
+
+/**
+ * A tapped push notification while the app is already open: the service worker asks the app
+ * to open the order in place (same tab, no reload). Paths on this site only.
+ */
+function ServiceWorkerNavigation() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+    const onMessage = (event) => {
+      const url = event.data?.type === 'karam:navigate' ? String(event.data.url || '') : '';
+      if (url.startsWith('/') && !url.startsWith('//')) navigate(url);
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [navigate]);
+  return null;
 }
 
 /** Legacy /products/:slug → clean /product/:slug */
@@ -138,6 +157,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <ServiceWorkerNavigation />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           {/* Storefront — blocked when site is in maintenance / development */}
@@ -193,6 +213,7 @@ export function AppRouter() {
               <Route path="reports/inventory" element={<InventoryReportPage />} />
               <Route path="reports/stock-availability" element={<StockAvailabilityReportPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
               <Route path="pos" element={<POSPage />} />
               <Route path="*" element={<NotFoundPage bare />} />
             </Route>

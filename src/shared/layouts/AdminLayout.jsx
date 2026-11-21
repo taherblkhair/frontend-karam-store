@@ -2,13 +2,15 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import {
   LayoutDashboard, Package, FolderTree, Warehouse, ShoppingBag,
   Users, UserCog, BarChart3, Settings, LogOut, Menu, Monitor, Truck, ShoppingCart, Image, Tag, X,
-  BadgePercent,
+  BadgePercent, Bell,
 } from 'lucide-react';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@core/auth/AuthContext';
 import { useTheme } from '@core/config/ThemeContext';
 import { LoadingSpinner } from '@shared/ui';
 import { useDrawer, drawerMotion } from '@shared/hooks/useDrawer';
+import { pushApi } from '@modules/notifications/api/push.api';
+import { currentSubscription } from '@modules/notifications/utils/pushDevice';
 
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'لوحة التحكم', end: true },
@@ -24,6 +26,7 @@ const adminLinks = [
   { to: '/admin/customers', icon: Users, label: 'العملاء' },
   { to: '/admin/users', icon: UserCog, label: 'المستخدمون', permission: 'users.manage' },
   { to: '/admin/reports', icon: BarChart3, label: 'التقارير' },
+  { to: '/admin/notifications', icon: Bell, label: 'الإشعارات' },
   { to: '/admin/settings', icon: Settings, label: 'الإعدادات' },
 ];
 
@@ -31,7 +34,40 @@ const salesLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'لوحة التحكم', end: true },
   { to: '/admin/pos', icon: Monitor, label: 'نقطة البيع' },
   { to: '/admin/orders', icon: ShoppingBag, label: 'الطلبات' },
+  { to: '/admin/notifications', icon: Bell, label: 'الإشعارات' },
 ];
+
+/**
+ * "Add to Home Screen" from the dashboard installs the dashboard app (opens /admin),
+ * not the storefront — the manifest link is swapped while the dashboard is open.
+ */
+function useAdminManifest() {
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return undefined;
+    const previous = link.getAttribute('href');
+    link.setAttribute('href', '/admin.webmanifest');
+    const title = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    const previousTitle = title?.getAttribute('content');
+    title?.setAttribute('content', 'لوحة كرم');
+    return () => {
+      link.setAttribute('href', previous);
+      if (title && previousTitle) title.setAttribute('content', previousTitle);
+    };
+  }, []);
+}
+
+/** Signing out of a device stops its order notifications (best effort, never blocks logout). */
+async function stopPushOnThisDevice() {
+  try {
+    const sub = await currentSubscription();
+    if (!sub) return;
+    await Promise.race([pushApi.removeByEndpoint(sub.endpoint), new Promise((r) => setTimeout(r, 2500))]).catch(() => {});
+    await sub.unsubscribe().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
 
 export default function AdminLayout() {
   const { user, logout, isAdmin, hasPermission } = useAuth();
@@ -54,7 +90,10 @@ export default function AdminLayout() {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   useDrawer(sidebarOpen, closeSidebar, asideRef);
 
-  const handleLogout = () => {
+  useAdminManifest();
+
+  const handleLogout = async () => {
+    await stopPushOnThisDevice();
     logout();
     navigate('/login');
   };
